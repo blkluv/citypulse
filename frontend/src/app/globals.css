@@ -1,0 +1,144 @@
+@import "tailwindcss";
+
+:root {
+  --background: #0a0f1e;
+  --foreground: #f0f4f8;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    Helvetica, Arial, sans-serif;
+}
+
+/* -------- Vehicle marker animations -------- */
+.vehicle-marker-container {
+  background: transparent !important;
+  border: none !important;
+}
+
+@keyframes pulse-fast {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.3); opacity: 0.6; }
+}
+
+@keyframes pulse-medium {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.2); opacity: 0.7; }
+}
+
+@keyframes pulse-slow {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.1); opacity: 0.8; }
+}
+
+.vehicle-pulse-fast {
+  animation: pulse-fast 1s ease-in-out infinite;
+}
+
+.vehicle-pulse-medium {
+  animation: pulse-medium 1.5s ease-in-out infinite;
+}
+
+.vehicle-pulse-slow {
+  animation: pulse-slow 2.5s ease-in-out infinite;
+}
+
+/* -------- Payment feed slide-in -------- */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.payment-slide-in {
+  animation: slideIn 0.3s ease-out forwards;
+}
+
+/* -------- Payment button glow -------- */
+@keyframes glow {
+  0%, 100% { box-shadow: 0 0 5px #00f0ff40; }
+  50% { box-shadow: 0 0 20px #00f0ff60, 0 0 40px #00f0ff20; }
+}
+
+.payment-glow {
+  animation: glow 2s ease-in-out infinite;
+}
+
+/* -------- Ticker scroll -------- */
+@keyframes ticker {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.ticker-scroll {
+  animation: ticker 40s linear infinite;
+}
+
+/* -------- Custom scrollbar -------- */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #111827;
+  border-radius: 2px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #2a3040;
+  border-radius: 2px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #3a4050;
+}
+
+/* Leaflet overrides for dark theme */
+.leaflet-container {
+  background: #0a0f1e !important;
+}
+
+.leaflet-control-attribution {
+  background: #0a0f1e99 !important;
+  color: #8892a4 !important;
+  font-size: 9px !important;
+}
+
+.leaflet-control-attribution a {
+  color: #00f0ff !important;
+}
+
+.leaflet-popup-content-wrapper {
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+.leaflet-popup-tip {
+  display: none !important;
+}
+
+.leaflet-tooltip {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+/* Route point marker */
+.route-point-marker {
+  background: transparent !important;
+  border: none !important;
+}
