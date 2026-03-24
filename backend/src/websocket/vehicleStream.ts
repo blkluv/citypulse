@@ -2,10 +2,20 @@ import { Server as SocketIOServer } from "socket.io";
 import { Server as HttpServer } from "http";
 import { VehicleSimulator } from "../simulator/vehicleSimulator.js";
 import { recordPayment } from "../routes/dashboardRoutes.js";
+import { eventStream, ContractPayment } from "../services/eventStream.js";
+import { demoSimulator } from "../services/demoSimulator.js";
 
 const ZONES = [
-  "Eminonu", "Taksim", "Kadikoy", "Levent", "Bakirkoy",
-  "Besiktas", "Fatih", "Sisli", "Beyoglu", "Uskudar",
+  "Eminonu",
+  "Taksim",
+  "Kadikoy",
+  "Levent",
+  "Bakirkoy",
+  "Besiktas",
+  "Fatih",
+  "Sisli",
+  "Beyoglu",
+  "Uskudar",
 ];
 
 const ENDPOINTS = [
@@ -69,35 +79,90 @@ export function setupWebSocket(
     });
   }, 500);
 
-  // Simulate payments every 5-15 seconds
-  function schedulePayment(): void {
+  // --- Real contract payment events ---
+  // When eventStream detects a new on-chain payment, broadcast it
+  eventStream.onNewPayment((contractPayment: ContractPayment) => {
+    const payment = {
+      id: `real_${contractPayment.txHash.slice(0, 16)}_${Date.now()}`,
+      txHash: contractPayment.txHash,
+      from: contractPayment.driver,
+      endpoint: `/api/traffic/route/${contractPayment.fromZone}-${contractPayment.toZone}`,
+      amount: contractPayment.amount,
+      timestamp: contractPayment.timestamp * 1000 || Date.now(),
+      zone: contractPayment.fromZone,
+      fromZone: contractPayment.fromZone,
+      toZone: contractPayment.toZone,
+      vehiclesQueried: contractPayment.vehiclesQueried,
+      blockNumber: contractPayment.blockNumber,
+      isReal: true,
+    };
+
+    // Record in dashboard store
+    recordPayment({
+      id: payment.id,
+      txHash: payment.txHash,
+      from: payment.from,
+      endpoint: payment.endpoint,
+      amount: payment.amount,
+      timestamp: payment.timestamp,
+      zone: payment.zone,
+    });
+
+    // Broadcast to all connected clients
+    io.emit("payment", payment);
+    console.log(
+      `[WS] Real payment broadcast: ${contractPayment.fromZone} -> ${contractPayment.toZone}, ${contractPayment.amount} ETH`,
+    );
+  });
+
+  // --- Demo simulator payment events ---
+  // When demo simulator sends a payment, it shows up via eventStream (on-chain),
+  // but we also log the intent here
+  demoSimulator.onPayment((info) => {
+    console.log(
+      `[WS] Demo payment sent: ${info.fromZone} -> ${info.toZone}, tx: ${info.txHash.slice(0, 16)}...`,
+    );
+  });
+
+  // --- Simulated (fake) payments for visual activity ---
+  // These are purely cosmetic and clearly marked as simulated
+  function scheduleSimulatedPayment(): void {
     const delay = 5000 + Math.random() * 10000; // 5-15 seconds
     setTimeout(() => {
       const endpointIdx = Math.floor(Math.random() * ENDPOINTS.length);
       const zone = ZONES[Math.floor(Math.random() * ZONES.length)];
 
       const payment = {
-        id: `pay_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+        id: `sim_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
         txHash: randomTxHash(),
         from: randomAddress(),
         endpoint: ENDPOINTS[endpointIdx],
         amount: AMOUNTS[endpointIdx],
         timestamp: Date.now(),
         zone,
+        isReal: false,
       };
 
       // Record it
-      recordPayment(payment);
+      recordPayment({
+        id: payment.id,
+        txHash: payment.txHash,
+        from: payment.from,
+        endpoint: payment.endpoint,
+        amount: payment.amount,
+        timestamp: payment.timestamp,
+        zone: payment.zone,
+      });
 
       // Broadcast to all connected clients
       io.emit("payment", payment);
 
       // Schedule next
-      schedulePayment();
+      scheduleSimulatedPayment();
     }, delay);
   }
 
-  schedulePayment();
+  scheduleSimulatedPayment();
 
   return io;
 }

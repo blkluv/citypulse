@@ -1,6 +1,7 @@
 "use client";
 
 import { WalletConnect } from "./WalletConnect";
+import { DemoModeButton } from "./DemoModeButton";
 
 interface HeaderProps {
   address: string | null;
@@ -40,13 +41,16 @@ export function Header({
           </span>
         </div>
       </div>
-      <WalletConnect
-        address={address}
-        balance={balance}
-        isConnecting={isConnecting}
-        onConnect={onConnect}
-        onDisconnect={onDisconnect}
-      />
+      <div className="flex items-center gap-3">
+        <DemoModeButton />
+        <WalletConnect
+          address={address}
+          balance={balance}
+          isConnecting={isConnecting}
+          onConnect={onConnect}
+          onDisconnect={onDisconnect}
+        />
+      </div>
     </header>
   );
 }

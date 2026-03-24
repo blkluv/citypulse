@@ -9,6 +9,7 @@ import { StatsBar } from "@/components/Dashboard/StatsBar";
 import { PaymentFeed } from "@/components/Dashboard/PaymentFeed";
 import { ZoneRanking } from "@/components/Dashboard/ZoneRanking";
 import { TimeChart } from "@/components/Dashboard/TimeChart";
+import { DataSources } from "@/components/Dashboard/DataSources";
 import { RouteRequest } from "@/components/RoutePanel/RouteRequest";
 import { RouteResult } from "@/components/RoutePanel/RouteResult";
 import { useVehicleStream } from "@/hooks/useVehicleStream";
@@ -50,14 +51,11 @@ function vehiclesToHeatmap(
   return points;
 }
 
-/** Generate placeholder hourly data. */
-function generateHourlyData(): number[] {
-  const data: number[] = [];
-  for (let i = 0; i < 24; i++) {
-    data.push(Math.floor(Math.random() * 20 + 2));
-  }
-  return data;
-}
+/** Deterministic placeholder hourly data (avoids hydration mismatch from Math.random). */
+const HOURLY_DATA = [
+  8, 5, 3, 4, 6, 9, 14, 18, 21, 19, 16, 13,
+  15, 17, 14, 12, 16, 20, 18, 14, 11, 9, 7, 5,
+];
 
 export default function Home() {
   const { vehicles, payments, connected: wsConnected } = useVehicleStream();
@@ -75,7 +73,7 @@ export default function Home() {
   const [endPoint, setEndPoint] = useState<[number, number] | null>(null);
   const [showPaymentPopup, setShowPaymentPopup] = useState(false);
 
-  const hourlyData = useMemo(() => generateHourlyData(), []);
+  const hourlyData = HOURLY_DATA;
 
   const heatmapPoints = useMemo(
     () => vehiclesToHeatmap(vehicles),
@@ -137,6 +135,13 @@ export default function Home() {
   const totalRevenue = payments
     .reduce((sum, p) => sum + parseFloat(p.amount || "0"), 0)
     .toFixed(4);
+
+  const simulatedCount = vehicles.filter(
+    (v) => !v.source || v.source === "simulated"
+  ).length;
+  const realCount = vehicles.filter((v) => v.source === "ibb").length;
+  const lastVehicleUpdate =
+    vehicles.length > 0 ? Date.now() : 0;
 
   const fromZone = startPoint
     ? getZoneFromCoords(startPoint[0], startPoint[1])
@@ -210,6 +215,13 @@ export default function Home() {
             avgCitySpeed={avgSpeed}
             savedMinutes={totalSavedMinutes}
             activeVehicles={vehicles.length}
+          />
+          <DataSources
+            osrmActive={wsConnected}
+            contractListening={wsConnected}
+            simulatedCount={simulatedCount}
+            realCount={realCount}
+            lastUpdate={lastVehicleUpdate}
           />
           <PaymentFeed payments={payments} />
           <ZoneRanking vehicles={vehicles} />

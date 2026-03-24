@@ -1,6 +1,7 @@
 "use client";
 
 import type { PaymentEvent } from "@/types";
+import { ARCSCAN_URL } from "@/lib/constants";
 
 interface PaymentFeedProps {
   payments: PaymentEvent[];
@@ -38,9 +39,20 @@ export function PaymentFeed({ payments }: PaymentFeedProps) {
               style={{ animationDelay: `${i * 50}ms` }}
             >
               <div className="flex items-center justify-between">
-                <span className="text-xs font-mono text-[#00f0ff]">
-                  {truncateAddress(p.driver)}
-                </span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-mono text-[#00f0ff]">
+                    {truncateAddress(p.driver)}
+                  </span>
+                  {p.isReal ? (
+                    <span className="px-1 py-px text-[8px] font-bold rounded bg-[#00ff88]/20 text-[#00ff88] border border-[#00ff88]/30">
+                      REAL
+                    </span>
+                  ) : (
+                    <span className="px-1 py-px text-[8px] font-bold rounded bg-[#8892a4]/20 text-[#8892a4] border border-[#8892a4]/30">
+                      SIM
+                    </span>
+                  )}
+                </div>
                 <span className="text-xs font-mono text-[#ffd700]">
                   {p.amount} USDC
                 </span>
@@ -61,6 +73,19 @@ export function PaymentFeed({ payments }: PaymentFeedProps) {
                   {timeAgo(p.timestamp)}
                 </span>
               </div>
+              {p.txHash && (
+                <div className="flex items-center gap-1">
+                  <span className="text-[9px] text-[#8892a4]">TX:</span>
+                  <a
+                    href={`${ARCSCAN_URL}/tx/${p.txHash}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[9px] font-mono text-[#00f0ff] hover:underline truncate"
+                  >
+                    {p.txHash.slice(0, 10)}...{p.txHash.slice(-6)}
+                  </a>
+                </div>
+              )}
             </div>
           ))
         )}

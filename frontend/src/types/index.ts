@@ -7,6 +7,7 @@ export interface MunicipalVehicle {
   heading: number;
   zone: string;
   status: "moving" | "stopped" | "idle";
+  source?: "ibb" | "simulated";
 }
 
 export interface PaymentEvent {
@@ -17,6 +18,8 @@ export interface PaymentEvent {
   vehiclesQueried: number;
   savedMinutes: number;
   timestamp: number;
+  txHash?: string;
+  isReal?: boolean;
 }
 
 export interface RouteResult {
@@ -27,6 +30,12 @@ export interface RouteResult {
   savedMinutes: number;
   vehiclesUsed: string[];
   cost: string;
+  routeDetails?: {
+    normalDistance: number;
+    optimizedDistance: number;
+    segmentsWithRealData: number;
+    dataSource: "osrm" | "grid-fallback";
+  };
 }
 
 export interface DashboardStats {
@@ -43,4 +52,11 @@ export interface HeatmapPoint {
   lat: number;
   lng: number;
   intensity: number;
+}
+
+export interface DashboardEvent {
+  type: "payment" | "congestion_change" | "vehicle_zone" | "incident";
+  timestamp: number;
+  isReal: boolean;
+  data: Record<string, unknown>;
 }

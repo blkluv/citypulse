@@ -8,9 +8,10 @@ interface StatCardProps {
   color: string;
   prefix?: string;
   suffix?: string;
+  verified?: boolean;
 }
 
-function StatCard({ label, value, color, prefix, suffix }: StatCardProps) {
+function StatCard({ label, value, color, prefix, suffix, verified }: StatCardProps) {
   const [displayValue, setDisplayValue] = useState<string | number>(
     typeof value === "number" ? 0 : value
   );
@@ -44,8 +45,16 @@ function StatCard({ label, value, color, prefix, suffix }: StatCardProps) {
 
   return (
     <div className="bg-[#1a1f2e] border border-[#2a3040] rounded-lg p-3">
-      <div className="text-[10px] uppercase tracking-wider text-[#8892a4] mb-1">
+      <div className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-[#8892a4] mb-1">
         {label}
+        {verified && (
+          <span
+            className="inline-flex items-center justify-center w-3 h-3 rounded-full bg-[#00ff88]/20 text-[#00ff88] text-[7px] font-bold leading-none"
+            title="Verified from contract"
+          >
+            &#10003;
+          </span>
+        )}
       </div>
       <div className="font-mono text-lg font-bold" style={{ color }}>
         {prefix}
@@ -81,11 +90,13 @@ export function StatsBar({
         value={parseFloat(totalRevenue).toFixed(4)}
         color="#ffd700"
         suffix=" USDC"
+        verified
       />
       <StatCard
         label="Queries"
         value={totalQueries}
         color="#00f0ff"
+        verified
       />
       <StatCard
         label="Avg Speed"

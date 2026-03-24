@@ -1,7 +1,9 @@
 import { VehicleSimulator } from "../simulator/vehicleSimulator.js";
-import { getCongestion } from "../simulator/trafficEngine.js";
+import { getCongestion, getAllZoneCongestion } from "../simulator/trafficEngine.js";
+import { osrmService } from "./osrmService.js";
+import { scoreRoute } from "./routeScorer.js";
 
-// Istanbul bounding box for the grid
+// Istanbul bounding box for the grid (used by fallback A* only)
 const BOUNDS = {
   minLat: 40.95,
   maxLat: 41.12,
@@ -13,14 +15,6 @@ const GRID_SIZE = 50;
 const LAT_STEP = (BOUNDS.maxLat - BOUNDS.minLat) / GRID_SIZE;
 const LNG_STEP = (BOUNDS.maxLng - BOUNDS.minLng) / GRID_SIZE;
 
-interface GridCell {
-  row: number;
-  col: number;
-  lat: number;
-  lng: number;
-  speed: number; // effective travel speed through this cell in km/h
-}
-
 interface PathNode {
   row: number;
   col: number;
@@ -29,6 +23,8 @@ interface PathNode {
   f: number; // g + h
   parent: PathNode | null;
 }
+
+// ─── Grid-based A* fallback ───────────────────────────────────────────────────
 
 /**
  * Build a speed grid from vehicle positions.
@@ -245,20 +241,10 @@ function normalRoute(
   return { path, timeMinutes: Math.max(timeMinutes, 5) };
 }
 
-export interface RouteResult {
-  optimizedRoute: [number, number][];
-  normalRoute: [number, number][];
-  normalTime: number;
-  optimizedTime: number;
-  savedMinutes: number;
-  vehiclesUsed: string[];
-  cost: string;
-}
-
 /**
- * Calculate optimized route using live vehicle data.
+ * Grid-based A* fallback (the original routing approach).
  */
-export function calculateRoute(
+function calculateRouteGridFallback(
   from: { lat: number; lng: number },
   to: { lat: number; lng: number },
   simulator: VehicleSimulator,
@@ -302,7 +288,114 @@ export function calculateRoute(
     normalTime: normal.timeMinutes,
     optimizedTime: optimizedTimeMinutes,
     savedMinutes,
-    vehiclesUsed: Array.from(usedVehicles).slice(0, 8), // Cap at 8 for display
+    vehiclesUsed: Array.from(usedVehicles).slice(0, 8),
     cost: "0.005",
+    routeDetails: {
+      normalDistance: 0,
+      optimizedDistance: 0,
+      segmentsWithRealData: 0,
+      dataSource: "grid-fallback",
+    },
+  };
+}
+
+// ─── Public interface ─────────────────────────────────────────────────────────
+
+export interface RouteResult {
+  optimizedRoute: [number, number][];
+  normalRoute: [number, number][];
+  normalTime: number; // minutes
+  optimizedTime: number; // minutes
+  savedMinutes: number;
+  vehiclesUsed: string[];
+  cost: string;
+  routeDetails: {
+    normalDistance: number; // meters
+    optimizedDistance: number; // meters
+    segmentsWithRealData: number;
+    dataSource: "osrm" | "grid-fallback";
+  };
+}
+
+/**
+ * Calculate optimized route using OSRM + live vehicle data scoring.
+ * Falls back to grid-based A* if OSRM is unreachable.
+ *
+ * Strategy:
+ * 1. Fetch up to 3 alternative routes from OSRM
+ * 2. Score each route using live vehicle speed data (routeScorer)
+ * 3. Pick the route with lowest cityPulseDuration as "optimized"
+ * 4. Use OSRM's default (first) route as "normal"
+ * 5. Return both with comparison metrics
+ */
+export async function calculateRoute(
+  from: { lat: number; lng: number },
+  to: { lat: number; lng: number },
+  simulator: VehicleSimulator,
+): Promise<RouteResult> {
+  // Try OSRM first
+  const osrmResult = await osrmService.getRoute(from, to);
+
+  if (osrmResult.error || osrmResult.routes.length === 0) {
+    // OSRM unavailable — fall back to grid-based A*
+    console.warn(
+      `[CityPulse] OSRM unavailable (${osrmResult.error || "no routes"}), using grid fallback`,
+    );
+    return calculateRouteGridFallback(from, to, simulator);
+  }
+
+  // Gather live vehicle data for scoring
+  const vehicles = simulator.getVehicles().map((v) => ({
+    id: v.id,
+    lat: v.lat,
+    lng: v.lng,
+    speed: v.speed,
+  }));
+
+  const congestionData = getAllZoneCongestion().map((z) => ({
+    zone: z.zone,
+    congestion: z.congestion,
+  }));
+
+  const vehicleRadius = parseInt(process.env.ROUTE_VEHICLE_RADIUS_METERS || "300");
+
+  // Score all OSRM routes
+  const scoredRoutes = osrmResult.routes.map((route) => ({
+    route,
+    score: scoreRoute(
+      route.geometry,
+      route.duration,
+      vehicles,
+      congestionData,
+      vehicleRadius,
+    ),
+  }));
+
+  // The "normal" route = OSRM's first (default) route
+  const normalOsrm = scoredRoutes[0];
+
+  // The "optimized" route = the one with the lowest cityPulseDuration
+  const optimized = scoredRoutes.reduce((best, current) =>
+    current.score.cityPulseDuration < best.score.cityPulseDuration ? current : best,
+  );
+
+  const normalTimeMinutes = Math.max(Math.round(normalOsrm.route.duration / 60), 1);
+  const optimizedTimeMinutes = Math.max(Math.round(optimized.score.cityPulseDuration / 60), 1);
+  const savedMinutes = Math.max(normalTimeMinutes - optimizedTimeMinutes, 0);
+
+  return {
+    optimizedRoute: optimized.route.geometry,
+    normalRoute: normalOsrm.route.geometry,
+    normalTime: normalTimeMinutes,
+    optimizedTime: optimizedTimeMinutes,
+    savedMinutes,
+    vehiclesUsed: optimized.score.vehiclesUsed,
+    cost: "0.005",
+    routeDetails: {
+      normalDistance: Math.round(normalOsrm.route.distance),
+      optimizedDistance: Math.round(optimized.route.distance),
+      segmentsWithRealData: optimized.score.segmentsWithRealData,
+      dataSource: "osrm",
+    },
   };
 }

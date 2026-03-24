@@ -1,6 +1,8 @@
 import { Router, Request, Response } from "express";
 import { VehicleSimulator } from "../simulator/vehicleSimulator.js";
 import { getAllZoneCongestion, getHeatmapData } from "../simulator/trafficEngine.js";
+import { x402Verifier } from "../x402/verifier.js";
+import { eventStream } from "../services/eventStream.js";
 
 interface PaymentRecord {
   id: string;
@@ -111,16 +113,53 @@ export function createDashboardRoutes(simulator: VehicleSimulator): Router {
 
   /**
    * GET /api/dashboard/payments
-   * Public — last 50 payments
+   * Public — last 50 payments (includes both real on-chain and simulated)
    */
   router.get("/payments", (_req: Request, res: Response) => {
+    // Merge in-memory payments with historical on-chain payments
+    const onChainPayments = eventStream.getHistorical().map((p) => ({
+      id: `chain_${p.txHash.slice(0, 16)}`,
+      txHash: p.txHash,
+      from: p.driver,
+      endpoint: `/api/traffic/route/${p.fromZone}-${p.toZone}`,
+      amount: p.amount,
+      timestamp: p.timestamp * 1000 || Date.now(),
+      zone: p.fromZone,
+      fromZone: p.fromZone,
+      toZone: p.toZone,
+      vehiclesQueried: p.vehiclesQueried,
+      blockNumber: p.blockNumber,
+      isReal: true,
+    }));
+
+    // Combine: on-chain first, then in-memory, deduplicate by txHash
+    const seen = new Set<string>();
+    const combined = [];
+
+    for (const p of onChainPayments) {
+      if (!seen.has(p.txHash)) {
+        seen.add(p.txHash);
+        combined.push(p);
+      }
+    }
+    for (const p of payments) {
+      if (!seen.has(p.txHash)) {
+        seen.add(p.txHash);
+        combined.push({ ...p, isReal: false });
+      }
+    }
+
+    // Sort by timestamp descending
+    combined.sort((a, b) => b.timestamp - a.timestamp);
+
     res.json({
       success: true,
       timestamp: Date.now(),
-      count: Math.min(payments.length, 50),
+      count: Math.min(combined.length, 50),
       totalQueries,
       totalRevenue: Math.round(totalRevenue * 10000) / 10000,
-      payments: payments.slice(0, 50),
+      onChainPayments: onChainPayments.length,
+      payments: combined.slice(0, 50),
     });
   });
 
@@ -138,6 +177,35 @@ export function createDashboardRoutes(simulator: VehicleSimulator): Router {
       count: publicData.length,
       vehicles: publicData,
     });
+  });
+
+  /**
+   * GET /api/dashboard/contract-stats
+   * Public — live on-chain contract statistics
+   */
+  router.get("/contract-stats", async (_req: Request, res: Response) => {
+    try {
+      const contractStats = await x402Verifier.getContractStats();
+      const historicalCount = eventStream.getCount();
+
+      res.json({
+        success: true,
+        timestamp: Date.now(),
+        contract: {
+          address: process.env.CONTRACT_ADDRESS || "0xe551CbbF162e7d3A1fDF4ba994aC01c02176b9a5",
+          network: "arc-testnet",
+          chainId: 5042002,
+          ...contractStats,
+        },
+        historicalPaymentsLoaded: historicalCount,
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      res.status(500).json({
+        success: false,
+        error: `Failed to fetch contract stats: ${message}`,
+      });
+    }
   });
 
   return router;

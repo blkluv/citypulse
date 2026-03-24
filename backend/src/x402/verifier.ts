@@ -1,93 +1,158 @@
 import { ethers } from "ethers";
 import { config } from "../config.js";
 
-export interface PaymentVerification {
+const CITYPULSE_ABI = [
+  "event QueryPaid(address indexed driver, uint256 amount, uint256 timestamp, string fromZone, string toZone, uint256 vehiclesQueried)",
+  "function queryPrice() view returns (uint256)",
+  "function getStats() view returns (uint256, uint256, uint256, uint256)",
+];
+
+export interface VerificationResult {
   valid: boolean;
-  amount: bigint;
-  from: string;
   error?: string;
+  payment?: {
+    driver: string;
+    amount: string;
+    fromZone: string;
+    toZone: string;
+    vehiclesQueried: number;
+    txHash: string;
+    blockNumber: number;
+    timestamp: number;
+  };
 }
 
-/**
- * Verify a payment transaction on the Arc testnet.
- * Checks that the tx is confirmed, sent to the correct contract, and value >= minAmount.
- */
-export async function verifyPayment(
-  txHash: string,
-  minAmount: bigint,
-): Promise<PaymentVerification> {
-  try {
-    const provider = new ethers.JsonRpcProvider(config.arcTestnetRpcUrl);
+export interface ContractStats {
+  totalQueries: number;
+  totalRevenue: string;
+  queryPrice: string;
+  contractBalance: string;
+}
 
-    // Fetch transaction
-    const tx = await provider.getTransaction(txHash);
-    if (!tx) {
-      return { valid: false, amount: 0n, from: "", error: "Transaction not found" };
+class X402Verifier {
+  private provider: ethers.JsonRpcProvider;
+  private contract: ethers.Contract;
+  private usedTxHashes: Set<string> = new Set();
+
+  constructor() {
+    this.provider = new ethers.JsonRpcProvider(config.arcTestnetRpcUrl);
+    this.contract = new ethers.Contract(config.contractAddress, CITYPULSE_ABI, this.provider);
+  }
+
+  async verifyPayment(txHash: string): Promise<VerificationResult> {
+    // 1. Check replay protection
+    if (this.usedTxHashes.has(txHash.toLowerCase())) {
+      return { valid: false, error: "Transaction already used" };
     }
 
-    // Check recipient matches contract address
-    if (tx.to?.toLowerCase() !== config.contractAddress.toLowerCase()) {
+    try {
+      // 2. Get transaction receipt (with 3s retry if not yet mined)
+      let receipt = await this.provider.getTransactionReceipt(txHash);
+      if (!receipt) {
+        await new Promise((r) => setTimeout(r, 3000));
+        receipt = await this.provider.getTransactionReceipt(txHash);
+        if (!receipt) {
+          return { valid: false, error: "Transaction not found or not yet confirmed" };
+        }
+      }
+
+      // 3. Check tx was successful
+      if (receipt.status !== 1) {
+        return { valid: false, error: "Transaction failed on-chain" };
+      }
+
+      // 4. Check tx was to our contract
+      if (receipt.to?.toLowerCase() !== config.contractAddress.toLowerCase()) {
+        return { valid: false, error: "Transaction not sent to CityPulse contract" };
+      }
+
+      // 5. Parse QueryPaid event from logs
+      const iface = new ethers.Interface(CITYPULSE_ABI);
+      let queryPaidEvent = null;
+      for (const log of receipt.logs) {
+        try {
+          const parsed = iface.parseLog({ topics: [...log.topics], data: log.data });
+          if (parsed?.name === "QueryPaid") {
+            queryPaidEvent = parsed;
+            break;
+          }
+        } catch {
+          continue;
+        }
+      }
+
+      if (!queryPaidEvent) {
+        return { valid: false, error: "No QueryPaid event found" };
+      }
+
+      // 6. Extract payment details
+      const payment = {
+        driver: queryPaidEvent.args[0] as string,
+        amount: ethers.formatEther(queryPaidEvent.args[1]),
+        timestamp: Number(queryPaidEvent.args[2]),
+        fromZone: queryPaidEvent.args[3] as string,
+        toZone: queryPaidEvent.args[4] as string,
+        vehiclesQueried: Number(queryPaidEvent.args[5]),
+        txHash,
+        blockNumber: receipt.blockNumber,
+      };
+
+      // 7. Verify payment amount meets minimum
+      const queryPrice = await this.contract.queryPrice();
+      const requiredAmount = (queryPrice as bigint) * BigInt(payment.vehiclesQueried);
+      if ((queryPaidEvent.args[1] as bigint) < requiredAmount) {
+        return {
+          valid: false,
+          error: `Insufficient payment: paid ${payment.amount}, required ${ethers.formatEther(requiredAmount)}`,
+        };
+      }
+
+      // 8. Mark tx as used (replay protection, cap at 10000)
+      this.usedTxHashes.add(txHash.toLowerCase());
+      if (this.usedTxHashes.size > 10000) {
+        const entries = [...this.usedTxHashes];
+        this.usedTxHashes = new Set(entries.slice(entries.length - 5000));
+      }
+
+      return { valid: true, payment };
+    } catch (err) {
       return {
         valid: false,
-        amount: tx.value,
-        from: tx.from,
-        error: `Transaction recipient ${tx.to} does not match contract ${config.contractAddress}`,
+        error: `Verification error: ${err instanceof Error ? err.message : String(err)}`,
       };
     }
+  }
 
-    // Check confirmation
-    const receipt = await provider.getTransactionReceipt(txHash);
-    if (!receipt) {
+  /**
+   * Read contract stats for dashboard.
+   */
+  async getContractStats(): Promise<ContractStats> {
+    try {
+      const [totalQueries, totalRevenue, queryPrice, balance] = await this.contract.getStats();
       return {
-        valid: false,
-        amount: tx.value,
-        from: tx.from,
-        error: "Transaction not yet confirmed",
+        totalQueries: Number(totalQueries),
+        totalRevenue: ethers.formatEther(totalRevenue),
+        queryPrice: ethers.formatEther(queryPrice),
+        contractBalance: ethers.formatEther(balance),
       };
-    }
-
-    if (receipt.status !== 1) {
+    } catch (err) {
+      console.error("[X402Verifier] Failed to get contract stats:", err instanceof Error ? err.message : err);
       return {
-        valid: false,
-        amount: tx.value,
-        from: tx.from,
-        error: "Transaction reverted",
+        totalQueries: 0,
+        totalRevenue: "0",
+        queryPrice: "0",
+        contractBalance: "0",
       };
     }
+  }
 
-    const currentBlock = await provider.getBlockNumber();
-    const confirmations = currentBlock - receipt.blockNumber + 1;
-    if (confirmations < 1) {
-      return {
-        valid: false,
-        amount: tx.value,
-        from: tx.from,
-        error: "Transaction not yet confirmed (0 confirmations)",
-      };
-    }
+  getContract(): ethers.Contract {
+    return this.contract;
+  }
 
-    // Check value
-    if (tx.value < minAmount) {
-      return {
-        valid: false,
-        amount: tx.value,
-        from: tx.from,
-        error: `Payment too low: ${ethers.formatUnits(tx.value, 6)} < ${ethers.formatUnits(minAmount, 6)} USDC`,
-      };
-    }
-
-    return {
-      valid: true,
-      amount: tx.value,
-      from: tx.from,
-    };
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err);
-    return {
-      valid: false,
-      amount: 0n,
-      from: "",
-      error: `Verification error: ${message}`,
-    };
+  getProvider(): ethers.JsonRpcProvider {
+    return this.provider;
   }
 }
+
+export const x402Verifier = new X402Verifier();

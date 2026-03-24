@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { verifyPayment } from "./verifier.js";
+import { x402Verifier } from "./verifier.js";
 import { ethers } from "ethers";
 
 // Extend Request to include payment info
@@ -11,12 +11,15 @@ declare global {
         from: string;
         amount: string;
         demoMode: boolean;
+        fromZone?: string;
+        toZone?: string;
+        vehiclesQueried?: number;
       };
     }
   }
 }
 
-// Pricing for different endpoints (USDC with 18 decimal precision on Arc testnet)
+// Pricing for different endpoints
 const ENDPOINT_PRICES: Record<string, { amount: string; description: string }> = {
   "/api/traffic/vehicles": {
     amount: "0.001",
@@ -33,7 +36,6 @@ const ENDPOINT_PRICES: Record<string, { amount: string; description: string }> =
 };
 
 function getPrice(path: string): { amount: string; description: string } {
-  // Match exact or prefix
   for (const [endpoint, price] of Object.entries(ENDPOINT_PRICES)) {
     if (path.startsWith(endpoint)) {
       return price;
@@ -44,8 +46,10 @@ function getPrice(path: string): { amount: string; description: string } {
 
 /**
  * x402 payment middleware.
- * Checks for X-PAYMENT-TX header and verifies payment on-chain.
- * Also supports X-DEMO-MODE: true for testing without real transactions.
+ *
+ * - If X-DEMO-MODE: true -> bypass (keep for testing)
+ * - If X-PAYMENT-TX -> verify on-chain using x402Verifier
+ * - If neither -> return 402 with pricing info including contract stats
  */
 export function x402Middleware(req: Request, res: Response, next: NextFunction): void {
   const demoMode = req.headers["x-demo-mode"] === "true";
@@ -63,26 +67,53 @@ export function x402Middleware(req: Request, res: Response, next: NextFunction):
     return;
   }
 
-  // No payment header — return 402 with pricing
+  // No payment header -> return 402 with pricing
   if (!txHash) {
     const price = getPrice(req.path);
-    res.status(402).json({
-      status: 402,
-      message: "Payment Required",
-      x402: {
-        version: "1.0",
-        scheme: "exact",
-        network: "arc-testnet",
-        currency: "USDC",
-        amount: price.amount,
-        amountBaseUnits: ethers.parseUnits(price.amount, 6).toString(),
-        recipient: process.env.CONTRACT_ADDRESS || "0x0000000000000000000000000000000000000000",
-        description: price.description,
-        paymentHeader: "X-PAYMENT-TX",
-        demoHeader: "X-DEMO-MODE",
-        endpoints: ENDPOINT_PRICES,
-      },
-    });
+
+    // Fetch contract stats for richer 402 response
+    x402Verifier
+      .getContractStats()
+      .then((contractStats) => {
+        res.status(402).json({
+          status: 402,
+          message: "Payment Required",
+          x402: {
+            version: "1.0",
+            scheme: "exact",
+            network: "arc-testnet",
+            chainId: 5042002,
+            currency: "ETH",
+            amount: price.amount,
+            recipient: process.env.CONTRACT_ADDRESS || "0xe551CbbF162e7d3A1fDF4ba994aC01c02176b9a5",
+            description: price.description,
+            paymentHeader: "X-PAYMENT-TX",
+            demoHeader: "X-DEMO-MODE",
+            endpoints: ENDPOINT_PRICES,
+            contractStats,
+          },
+        });
+      })
+      .catch(() => {
+        // Fallback without contract stats
+        res.status(402).json({
+          status: 402,
+          message: "Payment Required",
+          x402: {
+            version: "1.0",
+            scheme: "exact",
+            network: "arc-testnet",
+            chainId: 5042002,
+            currency: "ETH",
+            amount: price.amount,
+            recipient: process.env.CONTRACT_ADDRESS || "0xe551CbbF162e7d3A1fDF4ba994aC01c02176b9a5",
+            description: price.description,
+            paymentHeader: "X-PAYMENT-TX",
+            demoHeader: "X-DEMO-MODE",
+            endpoints: ENDPOINT_PRICES,
+          },
+        });
+      });
     return;
   }
 
@@ -96,21 +127,23 @@ export function x402Middleware(req: Request, res: Response, next: NextFunction):
     return;
   }
 
-  // Verify payment on-chain
-  const price = getPrice(req.path);
-  const minAmount = ethers.parseUnits(price.amount, 6);
-
-  verifyPayment(txHash, minAmount)
+  // Verify payment on-chain using the new verifier
+  x402Verifier
+    .verifyPayment(txHash)
     .then((result) => {
-      if (result.valid) {
+      if (result.valid && result.payment) {
         req.paymentInfo = {
           txHash,
-          from: result.from,
-          amount: ethers.formatUnits(result.amount, 6),
+          from: result.payment.driver,
+          amount: result.payment.amount,
           demoMode: false,
+          fromZone: result.payment.fromZone,
+          toZone: result.payment.toZone,
+          vehiclesQueried: result.payment.vehiclesQueried,
         };
         next();
       } else {
+        const price = getPrice(req.path);
         res.status(402).json({
           status: 402,
           message: "Payment verification failed",
@@ -119,9 +152,10 @@ export function x402Middleware(req: Request, res: Response, next: NextFunction):
             version: "1.0",
             scheme: "exact",
             network: "arc-testnet",
-            currency: "USDC",
+            chainId: 5042002,
+            currency: "ETH",
             amount: price.amount,
-            recipient: process.env.CONTRACT_ADDRESS || "0x0000000000000000000000000000000000000000",
+            recipient: process.env.CONTRACT_ADDRESS || "0xe551CbbF162e7d3A1fDF4ba994aC01c02176b9a5",
           },
         });
       }

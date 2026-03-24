@@ -55,6 +55,24 @@ export function useVehicleStream() {
         vehiclesQueried: (data.vehiclesQueried as number) || Math.floor(Math.random() * 5) + 1,
         savedMinutes: (data.savedMinutes as number) || Math.floor(Math.random() * 20) + 3,
         timestamp: (data.timestamp as number) || Date.now(),
+        txHash: (data.txHash as string) || undefined,
+        isReal: false,
+      };
+      addPayment(payment);
+    });
+
+    socket.on("contract_payment", (data: Record<string, unknown>) => {
+      // Real on-chain payment from contract events
+      const payment: PaymentEvent = {
+        driver: (data.from as string) || (data.driver as string) || "0x???",
+        amount: String(data.amount || "0.0001"),
+        fromZone: (data.fromZone as string) || (data.zone as string) || "Unknown",
+        toZone: (data.toZone as string) || "Unknown",
+        vehiclesQueried: (data.vehiclesQueried as number) || 0,
+        savedMinutes: (data.savedMinutes as number) || 0,
+        timestamp: (data.timestamp as number) || Date.now(),
+        txHash: (data.txHash as string) || undefined,
+        isReal: true,
       };
       addPayment(payment);
     });

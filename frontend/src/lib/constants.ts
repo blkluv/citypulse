@@ -22,6 +22,9 @@ export const VEHICLE_COLORS: Record<string, string> = {
   police: "#f59e0b",
 };
 
+export const ARCSCAN_URL =
+  process.env.NEXT_PUBLIC_ARCSCAN_URL || "https://testnet.arcscan.app";
+
 export const ISTANBUL_ZONES = [
   "Fatih",
   "Beyoglu",

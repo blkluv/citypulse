@@ -8,10 +8,11 @@ export function createRouteOptimizerRoutes(simulator: VehicleSimulator): Router 
 
   /**
    * POST /api/route
-   * x402 protected — optimized route using live vehicle data
+   * x402 protected — optimized route using OSRM + live vehicle data
+   * Falls back to grid-based A* if OSRM is unavailable
    * Body: { from: { lat, lng }, to: { lat, lng } }
    */
-  router.post("/", x402Middleware, (req: Request, res: Response) => {
+  router.post("/", x402Middleware, async (req: Request, res: Response) => {
     const { from, to } = req.body;
 
     // Validate input
@@ -37,7 +38,7 @@ export function createRouteOptimizerRoutes(simulator: VehicleSimulator): Router 
     }
 
     try {
-      const result = calculateRoute(from, to, simulator);
+      const result = await calculateRoute(from, to, simulator);
 
       res.json({
         success: true,
@@ -50,6 +51,7 @@ export function createRouteOptimizerRoutes(simulator: VehicleSimulator): Router 
         savedMinutes: result.savedMinutes,
         vehiclesUsed: result.vehiclesUsed,
         cost: result.cost,
+        routeDetails: result.routeDetails,
       });
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);

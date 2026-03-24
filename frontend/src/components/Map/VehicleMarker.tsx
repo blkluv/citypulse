@@ -44,6 +44,11 @@ function createVehicleIcon(vehicle: MunicipalVehicle): L.DivIcon {
   const animClass = getAnimationClass(vehicle.speed);
   const letter = getVehicleEmoji(vehicle.type);
 
+  const isLive = vehicle.source === "ibb";
+  const badgeLabel = isLive ? "LIVE" : "SIM";
+  const badgeBg = isLive ? "#00ff88" : "#3b82f6";
+  const badgeOpacity = isLive ? "1" : "0.6";
+
   return L.divIcon({
     className: "vehicle-marker-container",
     html: `
@@ -65,6 +70,19 @@ function createVehicleIcon(vehicle: MunicipalVehicle): L.DivIcon {
           font-size:8px;font-weight:bold;color:#fff;
           font-family:monospace;
         ">${letter}</div>
+        <div style="
+          position:absolute;
+          top:-6px;right:-8px;
+          padding:0 3px;
+          font-size:6px;font-weight:bold;
+          font-family:monospace;
+          color:#fff;
+          background:${badgeBg};
+          opacity:${badgeOpacity};
+          border-radius:3px;
+          line-height:10px;
+          white-space:nowrap;
+        ">${badgeLabel}</div>
       </div>
     `,
     iconSize: [24, 24],
@@ -97,6 +115,19 @@ export function VehicleMarker({ vehicle }: VehicleMarkerProps) {
           </span>
           <span style={{ color: "#8892a4" }}> | </span>
           <span>{vehicle.zone}</span>
+          {vehicle.source && (
+            <>
+              <span style={{ color: "#8892a4" }}> | </span>
+              <span
+                style={{
+                  color: vehicle.source === "ibb" ? "#00ff88" : "#3b82f6",
+                  fontWeight: "bold",
+                }}
+              >
+                {vehicle.source === "ibb" ? "LIVE" : "SIM"}
+              </span>
+            </>
+          )}
         </div>
       </Tooltip>
     </Marker>
