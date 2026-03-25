@@ -2,6 +2,8 @@
 
 > **Municipal vehicles are already everywhere. Their data is going to waste. x402 nanopayments unlock this data for anyone who needs it. The municipality earns revenue. Drivers save time. The city gets smarter. Everyone wins.**
 
+**Live Demo**: [Dashboard](https://citypulse-istanbul.vercel.app) | [Drive](https://citypulse-istanbul.vercel.app/drive) | [Backend API](https://citypulse-backend-production.up.railway.app/api/health)
+
 CityPulse is a full-stack application showing how municipalities can monetize fleet vehicle telemetry data through x402 nanopayments on [Arc](https://arc.fun). Drivers pay sub-cent USDC amounts to get real-time, ground-truth traffic data from municipal vehicles (buses, garbage trucks, service cars) and receive optimized routes that avoid congestion.
 
 ## Why CityPulse?
