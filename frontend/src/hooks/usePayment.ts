@@ -37,23 +37,20 @@ export function usePayment() {
       });
 
       try {
-        // Step 1: Pay on-chain
-        let txHash: string;
-        try {
-          const payResult = await contract.payForRoute(
-            fromZone,
-            toZone,
-            vehicleCount
-          );
-          txHash = payResult.txHash;
-        } catch {
-          // If wallet not connected or tx fails, use demo mode
-          txHash = "0x" + "0".repeat(64);
+        // Step 1: Pay on-chain — NO fallback, real payment required
+        if (!contract.address) {
+          throw new Error("Connect your wallet first");
         }
+
+        const { txHash } = await contract.payForRoute(
+          fromZone,
+          toZone,
+          vehicleCount
+        );
 
         setPaymentState((s) => ({ ...s, txHash }));
 
-        // Step 2: Send tx hash to backend to get optimized route
+        // Step 2: Send REAL tx hash to backend — no demo mode
         const from = fromCoords || { lat: 41.04, lng: 28.99 };
         const to = toCoords || { lat: 41.01, lng: 28.97 };
 
@@ -62,7 +59,6 @@ export function usePayment() {
           headers: {
             "Content-Type": "application/json",
             "X-PAYMENT-TX": txHash,
-            "X-DEMO-MODE": "true",
           },
           body: JSON.stringify({ from, to }),
         });
