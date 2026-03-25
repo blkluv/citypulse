@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
-import { BrowserProvider, Contract, formatUnits } from "ethers";
+import { BrowserProvider, Contract, formatUnits, JsonRpcSigner } from "ethers";
 import { CONTRACT_ABI, CONTRACT_ADDRESS } from "@/lib/contract";
 import { ARC_TESTNET, getArcChainParams } from "@/lib/arc";
 
@@ -93,7 +93,11 @@ export function useContract() {
     async (fromZone: string, toZone: string, vehicleCount: number) => {
       const provider = getProvider();
       const signer = await provider.getSigner();
-      const contract = new Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+
+      // Arc Testnet doesn't support ENS — use runner that skips ENS resolution
+      const signerAddress = await signer.getAddress();
+      const noEnsSigner = new JsonRpcSigner(provider, signerAddress);
+      const contract = new Contract(CONTRACT_ADDRESS, CONTRACT_ABI, noEnsSigner);
 
       const price = await contract.queryPrice();
       const totalCost = price * BigInt(vehicleCount);
