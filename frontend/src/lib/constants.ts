@@ -6,8 +6,7 @@ export const BACKEND_URL =
 export const WS_URL =
   process.env.NEXT_PUBLIC_WS_URL || "http://localhost:3001";
 export const CONTRACT_ADDRESS =
-  process.env.NEXT_PUBLIC_CONTRACT_ADDRESS ||
-  "0x0000000000000000000000000000000000000000";
+  (process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || "0x0000000000000000000000000000000000000000").trim();
 
 export const TILE_URL =
   "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
