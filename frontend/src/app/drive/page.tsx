@@ -3,11 +3,11 @@
 import { useState, useCallback, useMemo } from "react";
 import { DynamicDriveMap } from "@/components/Drive/DynamicDriveMap";
 import { SearchOverlay } from "@/components/Drive/SearchOverlay";
-import { RouteComparisonCard } from "@/components/Drive/RouteComparisonCard";
 import { NavigationCard } from "@/components/Drive/NavigationCard";
 import { useVehicleStream } from "@/hooks/useVehicleStream";
 import { usePayment } from "@/hooks/usePayment";
 import type { RouteResult } from "@/types";
+import { BACKEND_URL } from "@/lib/constants";
 
 /** Simple zone detection from coordinates. */
 function getZoneFromCoords(lat: number, lng: number): string {
@@ -30,10 +30,7 @@ function getZoneFromCoords(lat: number, lng: number): string {
 
 /** Haversine distance in km */
 function haversineKm(
-  lat1: number,
-  lng1: number,
-  lat2: number,
-  lng2: number
+  lat1: number, lng1: number, lat2: number, lng2: number
 ): number {
   const R = 6371;
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
@@ -46,7 +43,13 @@ function haversineKm(
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-type DrivePhase = "search" | "estimate" | "navigating";
+interface BaselineRoute {
+  route: [number, number][];
+  distance: number; // meters
+  duration: number; // minutes
+}
+
+type DrivePhase = "search" | "baseline" | "navigating";
 
 export default function DrivePage() {
   const { vehicles } = useVehicleStream();
@@ -59,32 +62,23 @@ export default function DrivePage() {
   } = usePayment();
 
   const [phase, setPhase] = useState<DrivePhase>("search");
-  const [startPoint, setStartPoint] = useState<{
-    lat: number;
-    lng: number;
-  } | null>(null);
-  const [endPoint, setEndPoint] = useState<{
-    lat: number;
-    lng: number;
-  } | null>(null);
+  const [startPoint, setStartPoint] = useState<{ lat: number; lng: number } | null>(null);
+  const [endPoint, setEndPoint] = useState<{ lat: number; lng: number } | null>(null);
   const [startName, setStartName] = useState("");
   const [endName, setEndName] = useState("");
   const [mapClickMode, setMapClickMode] = useState(false);
+
+  // Phase 1: Free baseline route (OSRM, no vehicle data)
+  const [baseline, setBaseline] = useState<BaselineRoute | null>(null);
+  const [baselineLoading, setBaselineLoading] = useState(false);
+
+  // Phase 2: Paid CityPulse route (after x402 payment)
   const [paidRoute, setPaidRoute] = useState<RouteResult | null>(null);
   const [paidCost, setPaidCost] = useState("0.0005");
 
-  // Pre-payment estimate (no backend call — just math)
+  // Estimate cost before payment (no backend call)
   const estimate = useMemo(() => {
     if (!startPoint || !endPoint) return null;
-    const distKm = haversineKm(
-      startPoint.lat,
-      startPoint.lng,
-      endPoint.lat,
-      endPoint.lng
-    );
-    // Estimate: road distance ≈ 1.4x straight line
-    const roadDistKm = distKm * 1.4;
-    // Count vehicles near the route corridor (within ~1km of midpoint)
     const midLat = (startPoint.lat + endPoint.lat) / 2;
     const midLng = (startPoint.lng + endPoint.lng) / 2;
     const nearbyVehicles = vehicles.filter(
@@ -92,35 +86,53 @@ export default function DrivePage() {
     );
     const vehicleCount = Math.max(nearbyVehicles.length, 1);
     const cost = (vehicleCount * 0.0001).toFixed(4);
-    // Time estimates
-    const normalTime = Math.round((roadDistKm / 20) * 60); // 20 km/h avg with traffic
-    const optimizedTime = Math.round((roadDistKm / 30) * 60); // 30 km/h with CityPulse
-    return {
-      distKm: roadDistKm,
-      vehicleCount,
-      cost,
-      normalTime,
-      optimizedTime,
-      savedMinutes: normalTime - optimizedTime,
-    };
+    return { vehicleCount, cost };
   }, [startPoint, endPoint, vehicles]);
+
+  // Fetch FREE baseline route from OSRM (public endpoint, no payment)
+  const fetchBaseline = useCallback(
+    async (from: { lat: number; lng: number }, to: { lat: number; lng: number }) => {
+      setBaselineLoading(true);
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/route/baseline`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ from, to }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setBaseline({
+            route: data.route,
+            distance: data.distance,
+            duration: data.duration,
+          });
+          setPhase("baseline");
+        }
+      } catch {
+        // Baseline fetch failed
+      } finally {
+        setBaselineLoading(false);
+      }
+    },
+    []
+  );
 
   const handleSetStart = useCallback(
     (coords: { lat: number; lng: number }, name: string) => {
       setStartPoint(coords);
       setStartName(name);
-      if (endPoint) setPhase("estimate");
+      if (endPoint) fetchBaseline(coords, endPoint);
     },
-    [endPoint]
+    [endPoint, fetchBaseline]
   );
 
   const handleSetEnd = useCallback(
     (coords: { lat: number; lng: number }, name: string) => {
       setEndPoint(coords);
       setEndName(name);
-      if (startPoint) setPhase("estimate");
+      if (startPoint) fetchBaseline(startPoint, coords);
     },
-    [startPoint]
+    [startPoint, fetchBaseline]
   );
 
   const handleMapClick = useCallback(
@@ -141,12 +153,13 @@ export default function DrivePage() {
     setEndPoint(null);
     setStartName("");
     setEndName("");
+    setBaseline(null);
     setPaidRoute(null);
     setPhase("search");
     clearResult();
   }, [clearResult]);
 
-  // PAY first, THEN get route data — this is the x402 flow
+  // PAY → then get CityPulse optimized route (x402 flow)
   const handlePay = useCallback(async () => {
     if (!startPoint || !endPoint || !estimate) return;
     const fromZone = getZoneFromCoords(startPoint.lat, startPoint.lng);
@@ -171,8 +184,25 @@ export default function DrivePage() {
     handleClear();
   }, [handleClear]);
 
-  // Only show real route AFTER payment
-  const displayRoute = phase === "navigating" ? paidRoute : null;
+  // Build a display route for the map
+  // Baseline phase: show only the free OSRM route (red)
+  // Navigating phase: show both normal + optimized from paid result
+  const displayRoute: RouteResult | null = useMemo(() => {
+    if (phase === "navigating" && paidRoute) return paidRoute;
+    if (phase === "baseline" && baseline) {
+      // Show baseline as "normalRoute" only (red dashed on map)
+      return {
+        normalRoute: baseline.route,
+        optimizedRoute: [], // no optimized yet — need to pay
+        normalTime: baseline.duration,
+        optimizedTime: 0,
+        savedMinutes: 0,
+        vehiclesUsed: [],
+        cost: "0",
+      };
+    }
+    return null;
+  }, [phase, paidRoute, baseline]);
 
   return (
     <div className="h-screen w-screen overflow-hidden bg-[#0a0f1e] relative">
@@ -186,7 +216,7 @@ export default function DrivePage() {
         mapClickEnabled={mapClickMode}
       />
 
-      {/* Search overlay (top) — hidden during navigation */}
+      {/* Search overlay (top) */}
       {phase !== "navigating" && (
         <SearchOverlay
           startPoint={startPoint}
@@ -201,8 +231,18 @@ export default function DrivePage() {
         />
       )}
 
-      {/* Estimate card (bottom) — BEFORE payment, no real route data */}
-      {phase === "estimate" && estimate && startPoint && endPoint && (
+      {/* Loading spinner for baseline fetch */}
+      {baselineLoading && (
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[900]">
+          <div className="bg-[#0a0f1e]/90 backdrop-blur-xl rounded-2xl px-6 py-4 flex items-center gap-3 border border-[#2a3040]">
+            <div className="w-5 h-5 border-2 border-[#00f0ff]/30 border-t-[#00f0ff] rounded-full animate-spin" />
+            <span className="text-sm text-[#8892a4]">Calculating route...</span>
+          </div>
+        </div>
+      )}
+
+      {/* BASELINE PHASE: Free route shown, offer CityPulse upgrade */}
+      {phase === "baseline" && baseline && estimate && (
         <div className="absolute bottom-0 left-0 right-0 z-[900] p-4 animate-[drive-card-slide-up_0.4s_ease-out]">
           <div className="max-w-lg mx-auto bg-[#0a0f1e]/95 backdrop-blur-xl rounded-2xl border border-[#2a3040] p-5 shadow-2xl">
             <div className="flex items-center justify-between mb-4">
@@ -211,53 +251,44 @@ export default function DrivePage() {
               </h3>
               <button
                 onClick={handleClear}
-                className="text-[#8892a4] hover:text-[#f0f4f8] text-lg leading-none"
+                className="text-[#8892a4] hover:text-[#f0f4f8] text-lg leading-none cursor-pointer"
               >
                 &times;
               </button>
             </div>
 
-            {/* Estimate comparison */}
-            <div className="space-y-3 mb-4">
-              <div className="flex items-center justify-between p-3 rounded-lg bg-[#ff4060]/10 border border-[#ff4060]/20">
+            {/* Baseline route (free, already shown on map) */}
+            <div className="p-3 rounded-lg bg-[#ff4060]/10 border border-[#ff4060]/20 mb-3">
+              <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span className="w-3 h-3 rounded-full bg-[#ff4060]" />
-                  <span className="text-[#f0f4f8] text-sm">Normal route</span>
+                  <span className="text-[#f0f4f8] text-sm">Standard route</span>
+                  <span className="text-[10px] text-[#8892a4] bg-[#2a3040] px-1.5 py-0.5 rounded">FREE</span>
                 </div>
                 <div className="text-right">
-                  <span className="text-[#ff4060] font-mono font-bold">
-                    ~{estimate.normalTime} min
-                  </span>
-                  <span className="text-[#8892a4] text-xs ml-2">
-                    ~{estimate.distKm.toFixed(1)} km
-                  </span>
+                  <span className="text-[#ff4060] font-mono font-bold">{baseline.duration} min</span>
+                  <span className="text-[#8892a4] text-xs ml-2">{(baseline.distance / 1000).toFixed(1)} km</span>
                 </div>
               </div>
+              <p className="text-[10px] text-[#8892a4] mt-1">OSRM baseline — no real-time traffic data</p>
+            </div>
 
-              <div className="flex items-center justify-between p-3 rounded-lg bg-[#00f0ff]/10 border border-[#00f0ff]/20">
+            {/* CityPulse upgrade offer (locked, need to pay) */}
+            <div className="p-3 rounded-lg bg-[#00f0ff]/5 border border-[#00f0ff]/20 border-dashed mb-4">
+              <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span className="w-3 h-3 rounded-full bg-[#00f0ff]" />
                   <span className="text-[#f0f4f8] text-sm">CityPulse route</span>
+                  <span className="text-[10px] text-[#ffd700] bg-[#ffd700]/10 px-1.5 py-0.5 rounded">{estimate.cost} USDC</span>
                 </div>
                 <div className="text-right">
-                  <span className="text-[#00f0ff] font-mono font-bold">
-                    ~{estimate.optimizedTime} min
-                  </span>
-                  <span className="text-[#ffd700] text-xs ml-2">
-                    {estimate.cost} USDC
-                  </span>
+                  <span className="text-[#8892a4] font-mono text-sm">? min</span>
+                  <span className="text-[10px] text-[#8892a4] ml-2">? km</span>
                 </div>
               </div>
-            </div>
-
-            {/* Savings + info */}
-            <div className="flex items-center justify-between mb-4 text-xs text-[#8892a4]">
-              <span className="text-[#00ff88]">
-                ~{estimate.savedMinutes} min faster
-              </span>
-              <span>
-                {estimate.vehicleCount} vehicles on route
-              </span>
+              <p className="text-[10px] text-[#8892a4] mt-1">
+                Optimized with {estimate.vehicleCount} municipal vehicles on route — pay to unlock
+              </p>
             </div>
 
             {/* Pay button */}
@@ -271,27 +302,25 @@ export default function DrivePage() {
               {paymentLoading ? (
                 <span className="flex items-center justify-center gap-2">
                   <span className="w-4 h-4 border-2 border-[#0a0f1e]/30 border-t-[#0a0f1e] rounded-full animate-spin" />
-                  Confirming on Arc...
+                  Verifying payment on Arc...
                 </span>
               ) : (
-                `Pay ${estimate.cost} USDC & Navigate`
+                `Pay ${estimate.cost} USDC — Unlock Faster Route`
               )}
             </button>
 
             {paymentError && (
-              <p className="text-[#ff4060] text-xs mt-2 text-center">
-                {paymentError}
-              </p>
+              <p className="text-[#ff4060] text-xs mt-2 text-center">{paymentError}</p>
             )}
 
             <p className="text-[10px] text-[#8892a4] text-center mt-2">
-              Routes unlock after on-chain payment verification
+              On-chain payment on Arc Testnet · Route unlocks after verification
             </p>
           </div>
         </div>
       )}
 
-      {/* Navigation card (bottom, after payment — now with real route data) */}
+      {/* NAVIGATING PHASE: Both routes shown + turn-by-turn */}
       {phase === "navigating" && paidRoute && (
         <NavigationCard
           route={paidRoute}
@@ -300,19 +329,16 @@ export default function DrivePage() {
         />
       )}
 
-      {/* Wallet indicator during navigation */}
+      {/* Wallet indicator */}
       {phase === "navigating" && (
         <div className="absolute top-3 right-3 z-[1000]">
-          <div className="bg-[#0a0f1e]/90 backdrop-blur-xl rounded-xl px-3 py-2 border border-[#2a3040] flex items-center gap-2">
+          <div className="bg-[#0a0f1e]/90 backdrop-blur-xl rounded-xl px-3 py-2 border border-[#2a3040]">
             {wallet.address ? (
               <span className="text-xs text-[#00ff88] font-mono">
                 {wallet.address.slice(0, 6)}...{wallet.address.slice(-4)}
               </span>
             ) : (
-              <button
-                onClick={wallet.connect}
-                className="text-xs text-[#00f0ff] hover:text-[#00d4e0]"
-              >
+              <button onClick={wallet.connect} className="text-xs text-[#00f0ff]">
                 Connect Wallet
               </button>
             )}
