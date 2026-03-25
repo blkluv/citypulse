@@ -29,8 +29,10 @@ export function useContract() {
     if (typeof window === "undefined" || !window.ethereum) {
       throw new Error("MetaMask not found");
     }
-    // Pass arcNetwork to disable ENS resolution
-    return new BrowserProvider(window.ethereum, arcNetwork);
+    const provider = new BrowserProvider(window.ethereum, arcNetwork);
+    // Arc Testnet has no ENS — override resolveName to skip ENS lookup entirely
+    provider.resolveName = async (name: string) => name;
+    return provider;
   }, []);
 
   const switchToArc = useCallback(async () => {
