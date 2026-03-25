@@ -1,32 +1,40 @@
 # CityPulse - Municipal Traffic x402 Nanopayments on Arc
 
-> **CityPulse doesn't just sell traffic data — it actively reduces congestion. Municipal buses run faster, ambulances arrive sooner, and the city gets cleaner. The municipality earns revenue while improving its own operations.**
+> **Municipal vehicles are already everywhere. Their data is going to waste. x402 nanopayments unlock this data for anyone who needs it. The municipality earns revenue. Drivers save time. The city gets smarter. Everyone wins.**
 
-## The Problem
+CityPulse is a full-stack application showing how municipalities can monetize fleet vehicle telemetry data through x402 nanopayments on [Arc](https://arc.fun). Drivers pay sub-cent USDC amounts to get real-time, ground-truth traffic data from municipal vehicles (buses, garbage trucks, service cars) and receive optimized routes that avoid congestion.
 
-Right now in Istanbul, everyone uses the same "shortest route" because Google Maps gives everyone the same answer. Result: that road jams, other roads stay empty. Municipal buses crawl at 5 km/h in traffic. Ambulances can't reach hospitals. Garbage trucks can't finish their routes on time.
+## Why CityPulse?
 
-## The Solution
+Today's traffic routing (Google Maps, Yandex) relies on satellite data with 5-15 minute delays. But municipal vehicles — buses, garbage trucks, ambulances, service cars — are already on every road, every hour. That's thousands of real-time speed sensors going to waste.
 
-CityPulse monetizes municipal fleet telemetry through x402 nanopayments on Arc. Drivers pay sub-cent USDC to get real-time, ground-truth traffic data from 40+ municipal vehicles (buses, garbage trucks, ambulances, police cars) and receive optimized routes that avoid congestion.
+CityPulse puts an x402 paywall on that data. Drivers pay 0.0001 USDC per vehicle data point (a fraction of a cent) and get routes based on ground truth, not stale estimates.
 
-But here's what makes it powerful: **CityPulse creates a flywheel effect.**
+### The Flywheel Effect
 
-When drivers use CityPulse, they avoid congested roads. But they don't all pile onto the same alternative — the system is real-time, so as one alternative fills up, another is suggested. **Traffic naturally balances across the entire road network.**
+CityPulse doesn't just sell traffic data — it actively reduces congestion:
 
-The result: municipal buses that were stuck at 5 km/h now move at 20 km/h. Ambulances reach hospitals in 8 minutes instead of 15. Garbage trucks finish their routes on time.
+```
+More drivers use CityPulse
+        ↓
+Traffic distributes evenly across the road network
+        ↓
+Municipal buses run faster → better service, lower fuel costs
+Ambulances arrive sooner → lives saved
+Garbage trucks finish routes on time → cleaner city
+        ↓
+Vehicles produce better data (faster movement = more coverage)
+        ↓
+CityPulse routes become more accurate
+        ↓
+More drivers use CityPulse  ← (cycle repeats)
+```
 
-### The Municipality Wins Three Times
-
-1. **Direct revenue** — Earns USDC from data sales via x402 nanopayments
-2. **Operational savings** — Own vehicles move faster → less fuel, more trips, fewer vehicles needed
-3. **Citizen satisfaction** — Buses on time, ambulances faster, cleaner city
-
-And the best part: **the more people use CityPulse, the better it works.** More drivers → better traffic distribution → faster municipal vehicles → better data → more accurate routes → more drivers. Classic network effect.
+The municipality wins three times: **direct revenue** from data sales, **operational savings** from faster fleet movement, and **citizen satisfaction** from better public services.
 
 ## Complementary to Tesla x402
 
-Inspired by [@corey__cooper](https://x.com/corey__cooper)'s Tesla Fleet Telemetry x402 build. CityPulse is the municipal counterpart:
+Inspired by [@corey__cooper](https://x.com/corey__cooper)'s Tesla Fleet Telemetry x402 build. CityPulse extends the same x402 pattern from individual vehicles to municipal fleets:
 
 | | Tesla x402 (Corey) | CityPulse (Himess) |
 |---|---|---|
@@ -36,70 +44,56 @@ Inspired by [@corey__cooper](https://x.com/corey__cooper)'s Tesla Fleet Telemetr
 | Use case | Vehicle monitoring | Real-time traffic avoidance |
 | Long-term value | Vehicle analytics | Urban planning intelligence |
 
-**Together**: Individual cars + municipal fleet = complete urban mobility data layer. Same x402 protocol. Same payment rails. Fully interoperable.
+**Together**: Individual cars + municipal fleet = complete urban mobility data layer. Same x402 protocol. Same USDC payment rails on Arc. Fully interoperable.
 
-## Real Data Sources (v2)
+## Live Data Sources
 
-CityPulse integrates real Istanbul data from the IBB Open Data Portal — this is not just a simulation.
+CityPulse integrates real Istanbul data alongside simulated vehicles:
 
-| Source | Data | Update Frequency | Status |
-|--------|------|-------------------|--------|
-| **IBB Traffic Index** | City-wide congestion (1-99 scale) | Real-time (5 min) | Live |
-| **ISPARK Parking** | 262 parking facilities, live occupancy | Real-time | Live |
-| **Traffic Incidents** | 50+ accidents/construction with GPS | Periodic | Live |
-| **IETT Bus Positions** | Fleet GPS via SOAP API | ~1 min | Auth required |
-| **OSRM Routing** | Real road-network routing (Istanbul streets) | On-demand | Live |
-| **Vehicle Simulator** | 40 municipal vehicles, 9 Istanbul routes | 500ms tick | Simulated |
+| Source | Type | Status | Details |
+|---|---|---|---|
+| **IBB Traffic Index** | Real congestion data | Live | 25 zones, real-time congestion levels |
+| **ISPARK Parking** | Real parking occupancy | Live | 262 parking lots, live availability |
+| **Traffic Incidents** | Real incident reports | Live | 50+ GPS-located events |
+| **OSRM Routing** | Real road network | Active | OpenStreetMap Istanbul, 347+ waypoint routes |
+| **Arc Contract** | On-chain payments | Listening | Real x402 verification with replay protection |
+| **Vehicle Simulator** | Simulated fleet | Simulated | 40 vehicles (buses, garbage trucks, ambulances, police) |
+| **IETT Bus Positions** | Real bus GPS | Pending | Requires SOAP authentication (graceful fallback active) |
 
-The system merges real IBB data with simulated vehicles. Each data point on the map is marked **LIVE** (from IBB) or **SIM** (simulated) for full transparency. When real data is unavailable, the system gracefully falls back to simulation.
+The dashboard marks each data point with its source: **LIVE** badge for real IBB/on-chain data, **SIM** badge for simulated vehicles. Every on-chain payment links directly to [ArcScan](https://testnet.arcscan.app).
 
-## On-Chain Verification (v2)
+## On-Chain Verification
 
-Every payment is cryptographically verified on Arc Testnet:
+Every payment is cryptographically verified on Arc Testnet before serving data:
 
-- **Receipt validation** — tx status, correct contract address
-- **Event log parsing** — QueryPaid event with driver, amount, zones, vehicle count
+- **Receipt validation** — `receipt.status === 1` and `receipt.to === CONTRACT_ADDRESS`
+- **Event log parsing** — `QueryPaid` event with driver, amount, zones, vehicle count
+- **Amount check** — payment >= `queryPrice * vehiclesQueried`
 - **Replay protection** — each tx hash can only be used once
-- **Contract stats** — totalQueries, totalRevenue read directly from chain
 
 Contract: [`0xe551CbbF162e7d3A1fDF4ba994aC01c02176b9a5`](https://testnet.arcscan.app/address/0xe551CbbF162e7d3A1fDF4ba994aC01c02176b9a5) on Arc Testnet (Chain ID: 5042002)
-
-## Demo Mode
-
-Click the **"Start Demo"** button in the header to activate demo mode. This makes **real on-chain transactions** on Arc Testnet every 10-15 seconds using the deployer wallet — the dashboard comes alive with real payments, the revenue counter ticks up, and the payment feed shows verified transactions with ArcScan links.
-
-This is not fake data — every demo payment is a real `payForRoute()` call verified on-chain.
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                    FRONTEND                               │
-│  Next.js + Leaflet/CartoDB Dark + TailwindCSS            │
-│  Live map, route comparison, dashboard, wallet connect   │
-└────────────────────────┬────────────────────────────────┘
-                         │ WebSocket + REST
-┌────────────────────────┼────────────────────────────────┐
-│                   BACKEND                                │
-│  Express + Socket.IO + ethers.js v6                      │
-│                        │                                 │
-│  ┌──────────┐ ┌────────┴───────┐ ┌───────────────────┐ │
-│  │ Vehicle  │ │ x402 Middleware │ │ OSRM Route       │ │
-│  │ Simulator│ │ + On-Chain     │ │ Optimizer +      │ │
-│  │ (40 veh) │ │ Verifier       │ │ Route Scorer     │ │
-│  └──────────┘ └────────────────┘ └───────────────────┘ │
-│  ┌──────────┐ ┌────────────────┐ ┌───────────────────┐ │
-│  │ IBB Data │ │ Event Stream   │ │ Demo Simulator   │ │
-│  │ Client   │ │ (contract      │ │ (real on-chain   │ │
-│  │ (4 APIs) │ │  events)       │ │  payments)       │ │
-│  └──────────┘ └────────────────┘ └───────────────────┘ │
-└────────────────────────┬────────────────────────────────┘
-                         │
-┌────────────────────────┼────────────────────────────────┐
-│              ARC TESTNET (Chain ID: 5042002)             │
-│  CityPulseX402 Contract — USDC nanopayments             │
-│  0xe551CbbF162e7d3A1fDF4ba994aC01c02176b9a5              │
-└─────────────────────────────────────────────────────────┘
+┌──────────────────────────┐     ┌──────────────────────────┐     ┌─────────────────┐
+│    Frontend              │     │    Backend               │     │   Arc Testnet    │
+│    Next.js + Leaflet     │◄───►│    Express + Socket.IO   │◄───►│   (EVM)         │
+│                          │     │                          │     │                 │
+│  • Live map (40 vehicles)│ WS  │  • Vehicle simulator     │     │  CityPulseX402  │
+│  • Route request + pay   │ REST│  • x402 middleware       │ RPC │  • payForRoute() │
+│  • Dashboard (stats)     │     │  • OSRM route optimizer  │     │  • getStats()   │
+│  • Payment feed          │     │  • IBB data client       │     │  • QueryPaid    │
+│  • Demo mode toggle      │     │  • WebSocket stream      │     │    events       │
+└──────────────────────────┘     └──────────────────────────┘     └─────────────────┘
+                                          │
+                                          ▼
+                                 ┌─────────────────┐
+                                 │  External APIs   │
+                                 │  • IBB Open Data │
+                                 │  • OSRM Routing  │
+                                 │  • ISPARK        │
+                                 └─────────────────┘
 ```
 
 ## Quick Start
@@ -119,6 +113,8 @@ forge install
 forge build
 forge script script/Deploy.s.sol --rpc-url https://rpc.testnet.arc.network --broadcast --private-key $PRIVATE_KEY
 ```
+
+Copy the deployed contract address for the next steps.
 
 ### 2. Start Backend
 
@@ -145,67 +141,96 @@ npm run dev
 ### 4. Configure MetaMask
 
 Add Arc Testnet to MetaMask:
-- Network Name: Arc Testnet
-- RPC URL: https://rpc.testnet.arc.network
-- Chain ID: 5042002
-- Currency: USDC
-- Explorer: https://testnet.arcscan.app
-- Faucet: https://faucet.circle.com
+- **Network Name**: Arc Testnet
+- **RPC URL**: `https://rpc.testnet.arc.network`
+- **Chain ID**: `5042002`
+- **Currency**: USDC
+- **Explorer**: https://testnet.arcscan.app
+- **Faucet**: https://faucet.circle.com
+
+## How It Works
+
+1. **40 municipal vehicles** move through Istanbul streets in real-time
+2. **Real IBB traffic data** feeds zone congestion levels and incident reports
+3. **Connect your wallet** and click two points on the map
+4. **Pay a sub-cent x402 nanopayment** — 0.0001 USDC per vehicle data point
+5. **OSRM calculates routes** on real Istanbul road network (347+ waypoints)
+6. **CityPulse re-scores routes** using live vehicle speeds and IBB congestion data
+7. **See the comparison**: Normal route vs CityPulse route with time saved
+8. **Every payment verified on-chain** — click the tx hash to see it on ArcScan
 
 ## x402 Payment Flow
 
+On Arc, USDC is the native gas token. No ERC-20 approve/transfer needed — `msg.value` is USDC directly. This makes sub-cent payments actually sub-cent.
+
 ```
-1. User clicks two points on map (start → end)
-2. Frontend shows: "5 vehicles on route, cost: 0.0005 USDC"
-3. User clicks "Pay & Get Route"
-4. MetaMask popup → contract.payForRoute(fromZone, toZone, vehicleCount)
-5. Transaction confirms on Arc Testnet
-6. Frontend sends POST /api/route with X-PAYMENT-TX: 0x... header
-7. Backend verifies tx on-chain (receipt + event log + replay check)
-8. OSRM returns real road-network route, scored with live vehicle data
-9. Map shows: red dashed (normal) vs cyan glow (optimized) routes
-10. Card shows: "Normal: 42 min → CityPulse: 28 min | Saved: 14 min"
+ 1. User clicks start + end points on map
+ 2. Frontend calculates: "5 vehicles on route → cost: 0.0005 USDC"
+ 3. User clicks "Pay & Get Route"
+ 4. MetaMask → contract.payForRoute(fromZone, toZone, vehicleCount, { value: cost })
+ 5. Transaction confirms on Arc Testnet (USDC native)
+ 6. Frontend sends route request with X-PAYMENT-TX: 0x... header
+ 7. Backend verifies on-chain:
+    ├── receipt.status === 1 (tx succeeded)
+    ├── receipt.to === CONTRACT_ADDRESS (correct contract)
+    ├── QueryPaid event parsed (amount, zones, vehicles)
+    ├── payment amount >= required (no underpayment)
+    └── tx hash not reused (replay protection)
+ 8. Verified → optimized route served
+ 9. Map renders: normal route (red dashed) vs CityPulse route (cyan glow)
+10. Card shows: "Normal: 42 min → CityPulse: 28 min | Saved: 14 min | Cost: 0.0005 USDC"
 ```
+
+## Demo Mode
+
+Click **"Start Demo"** in the top-right corner to activate demo mode. This creates **real on-chain transactions** on Arc Testnet every 10-15 seconds, simulating multiple drivers requesting routes simultaneously.
+
+Demo mode is not fake — every payment is a real, verifiable transaction on Arc Testnet with a valid ArcScan link. The dashboard comes alive: revenue ticks up, the payment feed scrolls, and zone rankings update based on actual query patterns.
 
 ## API Endpoints
 
 ### Public (no payment required)
 | Endpoint | Description |
 |----------|-------------|
-| `GET /api/health` | Health check |
 | `GET /api/dashboard/stats` | System statistics |
-| `GET /api/dashboard/heatmap` | Congestion heatmap data |
+| `GET /api/dashboard/contract-stats` | On-chain contract stats (verified) |
 | `GET /api/dashboard/payments` | Recent payments (real + simulated) |
-| `GET /api/dashboard/vehicles` | Vehicle positions |
-| `GET /api/dashboard/contract-stats` | On-chain contract stats |
 | `GET /api/ibb/traffic-index` | Real-time IBB traffic index |
 | `GET /api/ibb/parking` | ISPARK parking (262 facilities) |
 | `GET /api/ibb/incidents` | Traffic incidents |
-| `GET /api/ibb/buses` | IETT bus positions |
-| `GET /api/ibb/status` | IBB data quality status |
 
-### x402 Protected (payment required)
+### x402 Protected
 | Endpoint | Price | Description |
 |----------|-------|-------------|
 | `GET /api/traffic/vehicles` | 0.001 USDC | Real-time vehicle positions |
 | `GET /api/traffic/zone/:zone` | 0.0005 USDC | Zone traffic data |
 | `POST /api/route` | 0.005 USDC | OSRM-optimized route |
 
-### Demo Mode
+### Demo
 | Endpoint | Description |
 |----------|-------------|
 | `POST /api/demo/start` | Start real on-chain payment simulator |
 | `POST /api/demo/stop` | Stop demo mode |
-| `GET /api/demo/status` | Demo mode status |
+
+## Long-Term Vision
+
+All on-chain query data becomes a goldmine for urban planning:
+
+- **Pattern detection**: Which intersections are congested every Tuesday at 5 PM?
+- **Infrastructure investment**: Where should the next bypass road go?
+- **Signal optimization**: Which traffic lights need re-timing?
+- **Demand mapping**: Where do commuters spend the most to avoid traffic?
+
+Data-driven city planning, funded by the citizens who benefit from it. A circular economy where the data consumers (drivers) fund the infrastructure improvements that serve them.
 
 ## Tech Stack
 
 - **Contracts**: Solidity 0.8.24, Foundry (19 tests)
 - **Backend**: TypeScript, Express, Socket.IO, ethers.js v6
 - **Frontend**: Next.js 16, Leaflet, TailwindCSS, ethers.js v6
-- **Routing**: OSRM (real road network, with grid A* fallback)
-- **Data**: IBB Open Data Portal (Traffic Index, ISPARK, Incidents)
-- **Chain**: Arc Testnet (USDC native gas, Chain ID: 5042002)
+- **Chain**: Arc Testnet (EVM, USDC native gas, Chain ID: 5042002)
+- **Routing**: OSRM (OpenStreetMap real road network, grid A* fallback)
+- **Data**: IBB Open Data Portal (traffic index, parking, incidents)
 - **Map**: OpenStreetMap + CartoDB Dark Matter tiles
 
 ## Project Structure
@@ -213,24 +238,23 @@ Add Arc Testnet to MetaMask:
 ```
 citypulse/
 ├── README.md
-├── contracts/              # Foundry — CityPulseX402 smart contract
+├── contracts/           # Foundry — CityPulseX402 smart contract
 │   ├── src/
 │   ├── script/
-│   └── test/               # 19 tests
-├── backend/                # TypeScript — Express + Socket.IO server
+│   └── test/            # 19 tests
+├── backend/             # TypeScript — Express + Socket.IO server
 │   └── src/
-│       ├── data/           # IBB Open Data client + integration
-│       ├── simulator/      # 40 vehicle simulator (9 Istanbul routes)
-│       ├── x402/           # On-chain payment verification + middleware
-│       ├── routes/         # API endpoints (traffic, route, dashboard, IBB, demo)
-│       ├── services/       # OSRM routing, route scorer, event stream, demo simulator
-│       └── websocket/      # Real-time vehicle + payment stream
-└── frontend/               # Next.js — Interactive map dashboard
+│       ├── data/        # IBB Open Data client (traffic, parking, incidents)
+│       ├── simulator/   # 40 vehicle simulator (9 Istanbul routes)
+│       ├── x402/        # On-chain payment verification + middleware
+│       ├── routes/      # API endpoints (traffic, route, dashboard, IBB, demo)
+│       ├── services/    # OSRM routing, route scorer, event stream, demo simulator
+│       └── websocket/   # Real-time vehicle + payment stream
+└── frontend/            # Next.js — Interactive map dashboard
     └── src/
-        ├── components/     # Map (Leaflet), Dashboard, RoutePanel, common
-        ├── hooks/          # WebSocket, contract, payment
-        ├── lib/            # Arc config, ABI, constants
-        └── types/          # TypeScript interfaces
+        ├── components/  # Map, Dashboard, RoutePanel, DemoMode
+        ├── hooks/       # WebSocket, contract, payment
+        └── lib/         # Config, ABI, Arc chain config
 ```
 
 ## License
