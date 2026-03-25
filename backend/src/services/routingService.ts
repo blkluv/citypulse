@@ -2,6 +2,7 @@ import { VehicleSimulator } from "../simulator/vehicleSimulator.js";
 import { getCongestion, getAllZoneCongestion } from "../simulator/trafficEngine.js";
 import { osrmService } from "./osrmService.js";
 import { scoreRoute } from "./routeScorer.js";
+import { detectZone } from "../data/istanbulDistricts.js";
 
 // Istanbul bounding box for the grid (used by fallback A* only)
 const BOUNDS = {
@@ -40,7 +41,7 @@ function buildSpeedGrid(simulator: VehicleSimulator): number[][] {
     for (let c = 0; c < GRID_SIZE; c++) {
       const lat = BOUNDS.minLat + (r + 0.5) * LAT_STEP;
       const lng = BOUNDS.minLng + (c + 0.5) * LNG_STEP;
-      const zone = detectZoneForGrid(lat, lng);
+      const zone = detectZone(lat, lng);
       const congestion = getCongestion(zone, hour);
       // Base speed 50 km/h adjusted by congestion
       grid[r][c] = 50 * (1 - congestion * 0.6);
@@ -82,22 +83,7 @@ function buildSpeedGrid(simulator: VehicleSimulator): number[][] {
   return grid;
 }
 
-function detectZoneForGrid(lat: number, lng: number): string {
-  if (lng > 29.00) {
-    if (lat > 41.02) return "Uskudar";
-    return "Kadikoy";
-  }
-  if (lat > 41.06) return "Sisli";
-  if (lat > 41.04) return "Besiktas";
-  if (lat > 41.03) {
-    if (lng < 28.99) return "Beyoglu";
-    return "Taksim";
-  }
-  if (lat > 41.01) return "Eminonu";
-  if (lat > 41.00) return "Fatih";
-  if (lng < 28.90) return "Bakirkoy";
-  return "Fatih";
-}
+// Zone detection imported from istanbulDistricts.ts (polygon-based)
 
 function latLngToGrid(lat: number, lng: number): [number, number] {
   const row = Math.floor((lat - BOUNDS.minLat) / LAT_STEP);

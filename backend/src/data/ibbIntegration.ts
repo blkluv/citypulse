@@ -1,5 +1,6 @@
 import { ibbClient, IBBBusPosition } from "./ibbClient.js";
 import { VehicleSimulator } from "../simulator/vehicleSimulator.js";
+import { detectZone } from "./istanbulDistricts.js";
 
 interface UnifiedVehicle {
   id: string;
@@ -28,25 +29,7 @@ function ibbBusToUnified(bus: IBBBusPosition): UnifiedVehicle {
   };
 }
 
-// Simple zone detection from coordinates (matches vehicleSimulator.ts logic)
-function detectZone(lat: number, lng: number): string {
-  // Asian side
-  if (lng > 29.0) {
-    if (lat > 41.02) return "Uskudar";
-    return "Kadikoy";
-  }
-  // European side
-  if (lat > 41.06) return "Sisli";
-  if (lat > 41.04) return "Besiktas";
-  if (lat > 41.03) {
-    if (lng < 28.99) return "Beyoglu";
-    return "Taksim";
-  }
-  if (lat > 41.01) return "Eminonu";
-  if (lat > 41.0) return "Fatih";
-  if (lng < 28.9) return "Bakirkoy";
-  return "Fatih";
-}
+// Zone detection imported from istanbulDistricts.ts (polygon-based)
 
 // Merge IBB real buses + simulated vehicles
 export async function getUnifiedVehicles(simulator: VehicleSimulator): Promise<{

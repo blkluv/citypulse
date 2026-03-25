@@ -6,6 +6,8 @@
  * Zone congestion data is also factored in as a penalty.
  */
 
+import { detectZone } from "../data/istanbulDistricts.js";
+
 export interface RouteScore {
   osrmDuration: number; // seconds — OSRM's original estimate
   cityPulseDuration: number; // seconds — adjusted with real vehicle data
@@ -48,25 +50,7 @@ export function haversineMeters(
   return R * c;
 }
 
-/**
- * Detect Istanbul zone from coordinates (matches trafficEngine zone names).
- */
-function detectZone(lat: number, lng: number): string {
-  if (lng > 29.0) {
-    if (lat > 41.02) return "Uskudar";
-    return "Kadikoy";
-  }
-  if (lat > 41.06) return "Sisli";
-  if (lat > 41.04) return "Besiktas";
-  if (lat > 41.03) {
-    if (lng < 28.99) return "Beyoglu";
-    return "Taksim";
-  }
-  if (lat > 41.01) return "Eminonu";
-  if (lat > 41.0) return "Fatih";
-  if (lng < 28.9) return "Bakirkoy";
-  return "Fatih";
-}
+// Zone detection imported from istanbulDistricts.ts (polygon-based)
 
 /**
  * Score a route using live vehicle speed data and zone congestion.

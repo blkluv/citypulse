@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import { Header } from "@/components/common/Header";
 import { LiveTicker } from "@/components/common/LiveTicker";
 import { DynamicCityMap } from "@/components/Map/DynamicCityMap";
@@ -14,8 +14,8 @@ import { RouteRequest } from "@/components/RoutePanel/RouteRequest";
 import { RouteResult } from "@/components/RoutePanel/RouteResult";
 import { useVehicleStream } from "@/hooks/useVehicleStream";
 import { usePayment } from "@/hooks/usePayment";
-import { ISTANBUL_ZONES } from "@/lib/constants";
-import type { HeatmapPoint } from "@/types";
+import { ISTANBUL_ZONES, BACKEND_URL } from "@/lib/constants";
+import type { HeatmapPoint, RouteResult as RouteResultType } from "@/types";
 
 /** Assign a rough zone name based on lat/lng proximity to Istanbul center. */
 function getZoneFromCoords(lat: number, lng: number): string {
@@ -72,6 +72,40 @@ export default function Home() {
   const [startPoint, setStartPoint] = useState<[number, number] | null>(null);
   const [endPoint, setEndPoint] = useState<[number, number] | null>(null);
   const [showPaymentPopup, setShowPaymentPopup] = useState(false);
+  const [demoRoute, setDemoRoute] = useState<RouteResultType | null>(null);
+
+  // Fetch a sample route on mount so the map looks alive before user interaction
+  useEffect(() => {
+    if (startPoint || endPoint || routeResult) {
+      setDemoRoute(null);
+      return;
+    }
+
+    const fetchDemoRoute = async () => {
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/route`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-DEMO-MODE": "true",
+          },
+          body: JSON.stringify({
+            from: { lat: 41.037, lng: 28.985 },
+            to: { lat: 40.991, lng: 29.029 },
+          }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setDemoRoute(data);
+        }
+      } catch {
+        /* ignore - demo route is optional */
+      }
+    };
+
+    fetchDemoRoute();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [startPoint, endPoint, routeResult]);
 
   const hourlyData = HOURLY_DATA;
 
@@ -168,12 +202,46 @@ export default function Home() {
         <div className="flex-1 relative">
           <DynamicCityMap
             vehicles={vehicles}
-            routeResult={routeResult}
+            routeResult={routeResult || demoRoute}
             heatmapPoints={heatmapPoints}
             startPoint={startPoint}
             endPoint={endPoint}
             onMapClick={handleMapClick}
           />
+
+          {/* Instruction overlay when no route is active */}
+          {!startPoint && !endPoint && !routeResult && !demoRoute && (
+            <div className="absolute inset-0 z-[700] flex items-center justify-center pointer-events-none">
+              <div className="bg-[#0a0f1e]/80 backdrop-blur-sm rounded-2xl px-8 py-6 text-center border border-[#2a3040] max-w-sm">
+                <div className="text-[#00f0ff] text-4xl mb-3">&#x1F5FA;</div>
+                <h3 className="text-[#f0f4f8] text-lg font-semibold mb-2">Get an Optimized Route</h3>
+                <p className="text-[#8892a4] text-sm">Click two points on the map to set your start and end. CityPulse will find the fastest route using real-time municipal vehicle data.</p>
+                <div className="mt-4 flex items-center justify-center gap-3 text-xs text-[#8892a4]">
+                  <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-[#00ff88] inline-block"></span> Start</span>
+                  <span>&rarr;</span>
+                  <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-[#ff4060] inline-block"></span> End</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Demo route info overlay */}
+          {!routeResult && demoRoute && !startPoint && (
+            <div className="absolute bottom-20 left-4 z-[800] max-w-sm">
+              <div className="bg-[#1a1f2e]/95 backdrop-blur rounded-lg p-3 border border-[#2a3040]">
+                <div className="text-xs text-[#8892a4] mb-1">Sample Route: Taksim &rarr; Kadikoy</div>
+                <div className="flex items-center gap-3 text-sm">
+                  <span className="text-[#ff4060]">{demoRoute.normalTime}min</span>
+                  <span className="text-[#8892a4]">&rarr;</span>
+                  <span className="text-[#00f0ff]">{demoRoute.optimizedTime}min</span>
+                  <span className="text-[#00ff88] text-xs">({demoRoute.savedMinutes}min saved)</span>
+                </div>
+                {demoRoute.routeDetails?.dataSource === "osrm" && (
+                  <div className="text-[10px] text-[#8892a4] mt-1">OSRM road network | {demoRoute.routeDetails.segmentsWithRealData} segments with live data</div>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Route request overlay at bottom of map */}
           <div className="absolute bottom-4 left-4 right-4 z-[800] max-w-sm">
@@ -223,9 +291,9 @@ export default function Home() {
             realCount={realCount}
             lastUpdate={lastVehicleUpdate}
           />
+          <TimeChart data={hourlyData} />
           <PaymentFeed payments={payments} />
           <ZoneRanking vehicles={vehicles} />
-          <TimeChart data={hourlyData} />
         </div>
       </div>
 

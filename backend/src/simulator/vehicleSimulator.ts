@@ -1,3 +1,5 @@
+import { detectZone } from "../data/istanbulDistricts.js";
+
 export interface MunicipalVehicle {
   id: string;
   type: "bus" | "garbage_truck" | "service" | "ambulance" | "police";
@@ -230,47 +232,7 @@ const ROUTE_USKUDAR: [number, number][] = [
   [40.9860, 29.0760], // Bostanci
 ];
 
-// --- Zone detection ---
-function detectZone(lat: number, lng: number): string {
-  // Asian side
-  if (lng > 29.00) {
-    if (lat > 41.02) return "Uskudar";
-    if (lat > 40.97) return "Kadikoy";
-    return "Kadikoy";
-  }
-  // European side
-  if (lat > 41.06) return "Sisli";
-  if (lat > 41.04) {
-    if (lng > 29.00) return "Besiktas";
-    return "Besiktas";
-  }
-  if (lat > 41.03) {
-    if (lng < 28.99) return "Beyoglu";
-    return "Taksim";
-  }
-  if (lat > 41.01) {
-    if (lng < 28.975) return "Eminonu";
-    return "Fatih";
-  }
-  if (lat > 41.00) return "Fatih";
-  if (lng < 28.90) return "Bakirkoy";
-  if (lng < 28.95) return "Zeytinburnu";
-  return "Bakirkoy";
-}
-
-// Map zone names to canonical display names
-const ZONE_DISPLAY: Record<string, string> = {
-  "Bakirkoy": "Bakirkoy",
-  "Zeytinburnu": "Zeytinburnu",
-  "Fatih": "Fatih",
-  "Besiktas": "Besiktas",
-  "Beyoglu": "Beyoglu",
-  "Kadikoy": "Kadikoy",
-  "Sisli": "Sisli",
-  "Taksim": "Taksim",
-  "Eminonu": "Eminonu",
-  "Uskudar": "Uskudar",
-};
+// Zone detection imported from istanbulDistricts.ts (polygon-based)
 
 // Speed ranges per vehicle type in km/h
 const SPEED_RANGES: Record<string, [number, number]> = {
@@ -513,7 +475,7 @@ export class VehicleSimulator {
       lng: v.lng,
       speed: Math.round(v.speed * 10) / 10,
       heading: Math.round(v.heading * 10) / 10,
-      zone: ZONE_DISPLAY[v.zone] || v.zone,
+      zone: v.zone,
       status: v.status,
     }));
   }
