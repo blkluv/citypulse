@@ -291,29 +291,47 @@ export default function DrivePage() {
               </p>
             </div>
 
-            {/* Pay button */}
-            <button
-              onClick={handlePay}
-              disabled={paymentLoading}
-              className="w-full py-3 rounded-xl font-semibold text-sm transition-all cursor-pointer
-                bg-[#00f0ff] text-[#0a0f1e] hover:bg-[#00d4e0] active:scale-[0.98]
-                disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {paymentLoading ? (
-                <span className="flex items-center justify-center gap-2">
-                  <span className="w-4 h-4 border-2 border-[#0a0f1e]/30 border-t-[#0a0f1e] rounded-full animate-spin" />
-                  Verifying payment on Arc...
-                </span>
-              ) : (
-                `Pay ${estimate.cost} USDC — Unlock Faster Route`
-              )}
-            </button>
+            {/* Wallet + Pay button */}
+            {!wallet.address ? (
+              <button
+                onClick={wallet.connect}
+                disabled={wallet.isConnecting}
+                className="w-full py-3 rounded-xl font-semibold text-sm transition-all cursor-pointer
+                  bg-[#ffd700] text-[#0a0f1e] hover:bg-[#e6c200] active:scale-[0.98]
+                  disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {wallet.isConnecting ? "Connecting..." : "Connect Wallet to Pay"}
+              </button>
+            ) : (
+              <button
+                onClick={handlePay}
+                disabled={paymentLoading}
+                className="w-full py-3 rounded-xl font-semibold text-sm transition-all cursor-pointer
+                  bg-[#00f0ff] text-[#0a0f1e] hover:bg-[#00d4e0] active:scale-[0.98]
+                  disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {paymentLoading ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <span className="w-4 h-4 border-2 border-[#0a0f1e]/30 border-t-[#0a0f1e] rounded-full animate-spin" />
+                    Verifying payment on Arc...
+                  </span>
+                ) : (
+                  `Pay ${estimate.cost} USDC — Unlock Faster Route`
+                )}
+              </button>
+            )}
+
+            {wallet.address && (
+              <p className="text-[10px] text-[#00ff88] text-center mt-2 font-mono">
+                {wallet.address.slice(0, 6)}...{wallet.address.slice(-4)} · {wallet.balance} USDC
+              </p>
+            )}
 
             {paymentError && (
               <p className="text-[#ff4060] text-xs mt-2 text-center">{paymentError}</p>
             )}
 
-            <p className="text-[10px] text-[#8892a4] text-center mt-2">
+            <p className="text-[10px] text-[#8892a4] text-center mt-1">
               On-chain payment on Arc Testnet · Route unlocks after verification
             </p>
           </div>
@@ -329,22 +347,20 @@ export default function DrivePage() {
         />
       )}
 
-      {/* Wallet indicator */}
-      {phase === "navigating" && (
-        <div className="absolute top-3 right-3 z-[1000]">
-          <div className="bg-[#0a0f1e]/90 backdrop-blur-xl rounded-xl px-3 py-2 border border-[#2a3040]">
-            {wallet.address ? (
-              <span className="text-xs text-[#00ff88] font-mono">
-                {wallet.address.slice(0, 6)}...{wallet.address.slice(-4)}
-              </span>
-            ) : (
-              <button onClick={wallet.connect} className="text-xs text-[#00f0ff]">
-                Connect Wallet
-              </button>
-            )}
-          </div>
+      {/* Wallet indicator — always visible */}
+      <div className="absolute top-3 right-3 z-[1000]">
+        <div className="bg-[#0a0f1e]/90 backdrop-blur-xl rounded-xl px-3 py-2 border border-[#2a3040]">
+          {wallet.address ? (
+            <span className="text-xs text-[#00ff88] font-mono">
+              {wallet.address.slice(0, 6)}...{wallet.address.slice(-4)}
+            </span>
+          ) : (
+            <button onClick={wallet.connect} className="text-xs text-[#00f0ff] hover:text-[#00d4e0] cursor-pointer">
+              Connect Wallet
+            </button>
+          )}
         </div>
-      )}
+      </div>
 
       {/* Map click hint */}
       {mapClickMode && phase === "search" && (!startPoint || !endPoint) && (
