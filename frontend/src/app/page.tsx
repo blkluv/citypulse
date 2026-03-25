@@ -17,12 +17,24 @@ import { usePayment } from "@/hooks/usePayment";
 import { ISTANBUL_ZONES, BACKEND_URL } from "@/lib/constants";
 import type { HeatmapPoint, RouteResult as RouteResultType } from "@/types";
 
-/** Assign a rough zone name based on lat/lng proximity to Istanbul center. */
+/** Assign zone name from coordinates using simple boundary detection. */
 function getZoneFromCoords(lat: number, lng: number): string {
-  const zones = ISTANBUL_ZONES;
-  const idx =
-    Math.abs(Math.floor((lat * 1000 + lng * 1000) % zones.length));
-  return zones[idx];
+  if (lng > 29.00) {
+    if (lat > 41.02) return "Uskudar";
+    return "Kadikoy";
+  }
+  if (lat > 41.07) return "Levent";
+  if (lat > 41.05) return "Sisli";
+  if (lat > 41.04) return "Besiktas";
+  if (lat > 41.03) {
+    if (lng < 28.98) return "Beyoglu";
+    return "Taksim";
+  }
+  if (lat > 41.01) return "Eminonu";
+  if (lat > 41.00) return "Fatih";
+  if (lng < 28.92) return "Bakirkoy";
+  if (lng < 28.93) return "Zeytinburnu";
+  return "Fatih";
 }
 
 /** Generate sample heatmap from vehicle positions. */

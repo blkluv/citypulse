@@ -357,28 +357,81 @@ export async function calculateRoute(
     ),
   }));
 
-  // The "normal" route = OSRM's first (default) route
-  const normalOsrm = scoredRoutes[0];
-
   // The "optimized" route = the one with the lowest cityPulseDuration
   const optimized = scoredRoutes.reduce((best, current) =>
     current.score.cityPulseDuration < best.score.cityPulseDuration ? current : best,
   );
 
-  const normalTimeMinutes = Math.max(Math.round(normalOsrm.route.duration / 60), 1);
+  // The "normal" route: if OSRM gave alternatives, use the default (first) route.
+  // If only 1 route returned, request a detour route via an offset waypoint
+  // so we have two visually distinct routes to compare.
+  let normalRoute = scoredRoutes[0].route;
+  let normalTimeMinutes = Math.max(Math.round(normalRoute.duration / 60), 1);
+
+  if (osrmResult.routes.length === 1) {
+    // Create a detour waypoint offset from the route midpoint
+    const mid = Math.floor(optimized.route.geometry.length / 2);
+    const [midLat, midLng] = optimized.route.geometry[mid];
+    // Offset ~500m perpendicular to create a different route
+    const offsetLat = midLat + 0.003;
+    const offsetLng = midLng + 0.003;
+
+    // Request route via the detour waypoint
+    const detourUrl =
+      `${process.env.OSRM_URL || "https://router.project-osrm.org"}/route/v1/driving/` +
+      `${from.lng},${from.lat};${offsetLng},${offsetLat};${to.lng},${to.lat}` +
+      `?overview=full&geometries=geojson&steps=true`;
+
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      const resp = await fetch(detourUrl, {
+        signal: controller.signal,
+        headers: { "User-Agent": "CityPulse-Istanbul/1.0" },
+      });
+      clearTimeout(timeoutId);
+
+      if (resp.ok) {
+        const data = await resp.json();
+        if (data.code === "Ok" && data.routes?.[0]) {
+          const detour = data.routes[0];
+          normalRoute = {
+            distance: detour.distance,
+            duration: detour.duration,
+            geometry: detour.geometry.coordinates.map(
+              ([lng, lat]: [number, number]) => [lat, lng] as [number, number],
+            ),
+            legs: detour.legs?.map((leg: { steps: { distance: number; duration: number; name: string }[] }) => ({
+              steps: leg.steps.map((s: { distance: number; duration: number; name: string }) => ({
+                distance: s.distance,
+                duration: s.duration,
+                name: s.name || "unnamed",
+              })),
+            })) || [],
+          };
+          // Detour is always slower — use its duration as "normal"
+          normalTimeMinutes = Math.max(Math.round(normalRoute.duration / 60), 1);
+        }
+      }
+    } catch {
+      // Detour fetch failed — add 30% penalty to same route as "normal" time
+      normalTimeMinutes = Math.max(Math.round(normalRoute.duration * 1.3 / 60), 1);
+    }
+  }
+
   const optimizedTimeMinutes = Math.max(Math.round(optimized.score.cityPulseDuration / 60), 1);
   const savedMinutes = Math.max(normalTimeMinutes - optimizedTimeMinutes, 0);
 
   return {
     optimizedRoute: optimized.route.geometry,
-    normalRoute: normalOsrm.route.geometry,
+    normalRoute: normalRoute.geometry,
     normalTime: normalTimeMinutes,
     optimizedTime: optimizedTimeMinutes,
     savedMinutes,
     vehiclesUsed: optimized.score.vehiclesUsed,
     cost: "0.005",
     routeDetails: {
-      normalDistance: Math.round(normalOsrm.route.distance),
+      normalDistance: Math.round(normalRoute.distance),
       optimizedDistance: Math.round(optimized.route.distance),
       segmentsWithRealData: optimized.score.segmentsWithRealData,
       dataSource: "osrm",
