@@ -1,9 +1,12 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
-import { BrowserProvider, Contract, formatUnits, JsonRpcSigner } from "ethers";
+import { BrowserProvider, Contract, formatEther, Network } from "ethers";
 import { CONTRACT_ABI, CONTRACT_ADDRESS } from "@/lib/contract";
 import { ARC_TESTNET, getArcChainParams } from "@/lib/arc";
+
+// Define Arc network WITHOUT ENS — prevents getEnsAddress calls
+const arcNetwork = new Network("arc-testnet", ARC_TESTNET.id);
 
 interface ContractState {
   address: string | null;
@@ -26,7 +29,8 @@ export function useContract() {
     if (typeof window === "undefined" || !window.ethereum) {
       throw new Error("MetaMask not found");
     }
-    return new BrowserProvider(window.ethereum);
+    // Pass arcNetwork to disable ENS resolution
+    return new BrowserProvider(window.ethereum, arcNetwork);
   }, []);
 
   const switchToArc = useCallback(async () => {
@@ -54,7 +58,7 @@ export function useContract() {
       await provider.send("eth_requestAccounts", []);
       const signer = await provider.getSigner();
       const address = await signer.getAddress();
-      const balance = formatUnits(await provider.getBalance(address), 6);
+      const balance = formatEther(await provider.getBalance(address));
       const network = await provider.getNetwork();
       const chainId = Number(network.chainId);
 
@@ -93,11 +97,7 @@ export function useContract() {
     async (fromZone: string, toZone: string, vehicleCount: number) => {
       const provider = getProvider();
       const signer = await provider.getSigner();
-
-      // Arc Testnet doesn't support ENS — use runner that skips ENS resolution
-      const signerAddress = await signer.getAddress();
-      const noEnsSigner = new JsonRpcSigner(provider, signerAddress);
-      const contract = new Contract(CONTRACT_ADDRESS, CONTRACT_ABI, noEnsSigner);
+      const contract = new Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
 
       const price = await contract.queryPrice();
       const totalCost = price * BigInt(vehicleCount);
@@ -106,7 +106,7 @@ export function useContract() {
         value: totalCost,
       });
       const receipt = await tx.wait();
-      return { txHash: receipt.hash, cost: formatUnits(totalCost, 6) };
+      return { txHash: receipt.hash, cost: formatEther(totalCost) };
     },
     [getProvider]
   );
@@ -118,9 +118,9 @@ export function useContract() {
       await contract.getStats();
     return {
       totalQueries: Number(totalQueriesCount),
-      totalRevenue: formatUnits(totalRevenueAmount, 6),
-      queryPrice: formatUnits(currentPrice, 6),
-      balance: formatUnits(contractBalance, 6),
+      totalRevenue: formatEther(totalRevenueAmount),
+      queryPrice: formatEther(currentPrice),
+      balance: formatEther(contractBalance),
     };
   }, [getProvider]);
 
@@ -128,7 +128,7 @@ export function useContract() {
     const provider = getProvider();
     const contract = new Contract(CONTRACT_ADDRESS, CONTRACT_ABI, provider);
     const price = await contract.queryPrice();
-    return formatUnits(price, 6);
+    return formatEther(price);
   }, [getProvider]);
 
   useEffect(() => {
