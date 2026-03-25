@@ -22,6 +22,13 @@ export interface PaymentEvent {
   isReal?: boolean;
 }
 
+export interface NavigationStep {
+  distance: number;    // meters
+  duration: number;    // seconds
+  name: string;        // street name
+  instruction: string; // "Turn right onto X", "Continue straight", etc.
+}
+
 export interface RouteResult {
   optimizedRoute: [number, number][];
   normalRoute: [number, number][];
@@ -36,6 +43,7 @@ export interface RouteResult {
     segmentsWithRealData: number;
     dataSource: "osrm" | "grid-fallback";
   };
+  steps?: NavigationStep[];
 }
 
 export interface DashboardStats {

@@ -6,12 +6,19 @@
  * We convert to lat,lng for Leaflet on the way out.
  */
 
+export interface OSRMStep {
+  distance: number;
+  duration: number;
+  name: string;
+  maneuver: { type: string; modifier?: string };
+}
+
 export interface OSRMRoute {
   distance: number; // meters
   duration: number; // seconds
   geometry: [number, number][]; // [lat, lng] pairs (converted from OSRM's [lng,lat])
   legs: {
-    steps: { distance: number; duration: number; name: string }[];
+    steps: OSRMStep[];
   }[];
 }
 
@@ -100,6 +107,10 @@ class OSRMService {
             distance: step.distance,
             duration: step.duration,
             name: step.name || "unnamed road",
+            maneuver: {
+              type: step.maneuver.type,
+              modifier: step.maneuver.modifier,
+            },
           })),
         })),
       }));

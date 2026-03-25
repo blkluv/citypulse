@@ -285,7 +285,48 @@ function calculateRouteGridFallback(
   };
 }
 
+// ─── Maneuver → Instruction helper ────────────────────────────────────────────
+
+function maneuverToInstruction(type: string, modifier?: string, streetName?: string): string {
+  const street = streetName && streetName !== "unnamed road" ? ` onto ${streetName}` : "";
+  switch (type) {
+    case "turn":
+      return modifier ? `Turn ${modifier}${street}` : `Turn${street}`;
+    case "new name":
+      return `Continue${street}`;
+    case "depart":
+      return `Head${modifier ? ` ${modifier}` : ""}${street}`;
+    case "arrive":
+      return "You have arrived at your destination";
+    case "merge":
+      return `Merge ${modifier || ""}${street}`.trim();
+    case "on ramp":
+    case "ramp":
+      return `Take the ramp${modifier ? ` ${modifier}` : ""}${street}`;
+    case "off ramp":
+      return `Take the exit${street}`;
+    case "fork":
+      return `Keep ${modifier || "straight"}${street}`;
+    case "end of road":
+      return `Turn ${modifier || "right"}${street}`;
+    case "roundabout":
+    case "rotary":
+      return `Enter the roundabout and exit${street}`;
+    case "continue":
+      return `Continue straight${street}`;
+    default:
+      return `Continue${street}`;
+  }
+}
+
 // ─── Public interface ─────────────────────────────────────────────────────────
+
+export interface NavigationStep {
+  distance: number;    // meters
+  duration: number;    // seconds
+  name: string;        // street name
+  instruction: string; // "Turn right onto X", "Continue straight", etc.
+}
 
 export interface RouteResult {
   optimizedRoute: [number, number][];
@@ -301,6 +342,7 @@ export interface RouteResult {
     segmentsWithRealData: number;
     dataSource: "osrm" | "grid-fallback";
   };
+  steps?: NavigationStep[];
 }
 
 /**
@@ -401,11 +443,15 @@ export async function calculateRoute(
             geometry: detour.geometry.coordinates.map(
               ([lng, lat]: [number, number]) => [lat, lng] as [number, number],
             ),
-            legs: detour.legs?.map((leg: { steps: { distance: number; duration: number; name: string }[] }) => ({
-              steps: leg.steps.map((s: { distance: number; duration: number; name: string }) => ({
+            legs: detour.legs?.map((leg: { steps: { distance: number; duration: number; name: string; maneuver: { type: string; modifier?: string } }[] }) => ({
+              steps: leg.steps.map((s: { distance: number; duration: number; name: string; maneuver: { type: string; modifier?: string } }) => ({
                 distance: s.distance,
                 duration: s.duration,
                 name: s.name || "unnamed",
+                maneuver: {
+                  type: s.maneuver.type,
+                  modifier: s.maneuver.modifier,
+                },
               })),
             })) || [],
           };
@@ -432,6 +478,18 @@ export async function calculateRoute(
   const optimizedTimeMinutes = Math.max(Math.round(optimized.route.duration / 60), 1);
   const savedMinutes = Math.max(normalTimeMinutes - optimizedTimeMinutes, 1);
 
+  // Extract turn-by-turn steps from the optimized route
+  const steps: NavigationStep[] = optimized.route.legs.flatMap((leg) =>
+    leg.steps
+      .filter((s) => s.distance > 0) // skip zero-distance steps
+      .map((s) => ({
+        distance: Math.round(s.distance),
+        duration: Math.round(s.duration),
+        name: s.name,
+        instruction: maneuverToInstruction(s.maneuver.type, s.maneuver.modifier, s.name),
+      }))
+  );
+
   return {
     optimizedRoute: optimized.route.geometry,
     normalRoute: normalRoute.geometry,
@@ -446,5 +504,6 @@ export async function calculateRoute(
       segmentsWithRealData: optimized.score.segmentsWithRealData,
       dataSource: "osrm",
     },
+    steps,
   };
 }

@@ -42,6 +42,13 @@ export function Header({
         </div>
       </div>
       <div className="flex items-center gap-3">
+        <a
+          href="/drive"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-[#00f0ff]/10 text-[#00f0ff] hover:bg-[#00f0ff]/20 transition-colors border border-[#00f0ff]/20"
+        >
+          <span className="text-sm">&#x1F697;</span>
+          Drive
+        </a>
         <DemoModeButton />
         <WalletConnect
           address={address}

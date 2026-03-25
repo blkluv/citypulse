@@ -52,6 +52,7 @@ export function createRouteOptimizerRoutes(simulator: VehicleSimulator): Router 
         vehiclesUsed: result.vehiclesUsed,
         cost: result.cost,
         routeDetails: result.routeDetails,
+        steps: result.steps,
       });
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
