@@ -49,7 +49,7 @@ interface BaselineRoute {
   duration: number; // minutes
 }
 
-type DrivePhase = "search" | "baseline" | "navigating";
+type DrivePhase = "search" | "baseline" | "comparison" | "navigating";
 
 export default function DrivePage() {
   const { vehicles } = useVehicleStream();
@@ -176,7 +176,7 @@ export default function DrivePage() {
     if (result) {
       setPaidRoute(result);
       setPaidCost(result.cost || estimate.cost);
-      setPhase("navigating");
+      setPhase("comparison"); // Show both routes first, user confirms to navigate
     }
   }, [startPoint, endPoint, estimate, payForRoute]);
 
@@ -188,7 +188,7 @@ export default function DrivePage() {
   // Baseline phase: show only the free OSRM route (red)
   // Navigating phase: show both normal + optimized from paid result
   const displayRoute: RouteResult | null = useMemo(() => {
-    if (phase === "navigating" && paidRoute) return paidRoute;
+    if ((phase === "navigating" || phase === "comparison") && paidRoute) return paidRoute;
     if (phase === "baseline" && baseline) {
       // Show baseline as "normalRoute" only (red dashed on map)
       return {
@@ -217,7 +217,7 @@ export default function DrivePage() {
       />
 
       {/* Search overlay (top) */}
-      {phase !== "navigating" && (
+      {phase !== "navigating" && phase !== "comparison" && (
         <SearchOverlay
           startPoint={startPoint}
           endPoint={endPoint}
@@ -338,7 +338,76 @@ export default function DrivePage() {
         </div>
       )}
 
-      {/* NAVIGATING PHASE: Both routes shown + turn-by-turn */}
+      {/* COMPARISON PHASE: Both routes shown, user confirms to start navigation */}
+      {phase === "comparison" && paidRoute && (
+        <div className="absolute bottom-0 left-0 right-0 z-[900] p-4 animate-[drive-card-slide-up_0.4s_ease-out]">
+          <div className="max-w-lg mx-auto bg-[#0a0f1e]/95 backdrop-blur-xl rounded-2xl border border-[#2a3040] p-5 shadow-2xl">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-[#f0f4f8] font-semibold">Route Unlocked</h3>
+              <span className="text-[10px] text-[#00ff88] bg-[#00ff88]/10 px-2 py-0.5 rounded-full">PAID</span>
+            </div>
+
+            {/* Normal route */}
+            <div className="p-3 rounded-lg bg-[#ff4060]/10 border border-[#ff4060]/20 mb-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="w-3 h-3 rounded-full bg-[#ff4060]" />
+                  <span className="text-[#f0f4f8] text-sm">Normal route</span>
+                </div>
+                <div>
+                  <span className="text-[#ff4060] font-mono font-bold text-lg">{paidRoute.normalTime} min</span>
+                  {paidRoute.routeDetails && (
+                    <span className="text-[#8892a4] text-xs ml-2">{(paidRoute.routeDetails.normalDistance / 1000).toFixed(1)} km</span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* CityPulse route */}
+            <div className="p-3 rounded-lg bg-[#00f0ff]/10 border border-[#00f0ff]/30 mb-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="w-3 h-3 rounded-full bg-[#00f0ff]" />
+                  <span className="text-[#f0f4f8] text-sm font-medium">CityPulse route</span>
+                </div>
+                <div>
+                  <span className="text-[#00f0ff] font-mono font-bold text-lg">{paidRoute.optimizedTime} min</span>
+                  {paidRoute.routeDetails && (
+                    <span className="text-[#8892a4] text-xs ml-2">{(paidRoute.routeDetails.optimizedDistance / 1000).toFixed(1)} km</span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Savings highlight */}
+            <div className="flex items-center justify-center gap-4 mb-4 py-2 rounded-lg bg-[#00ff88]/5 border border-[#00ff88]/20">
+              <span className="text-[#00ff88] font-bold text-lg">{paidRoute.savedMinutes} min faster</span>
+              <span className="text-[#8892a4] text-xs">|</span>
+              <span className="text-[#8892a4] text-xs">{paidRoute.vehiclesUsed?.length || 0} vehicles used</span>
+              <span className="text-[#8892a4] text-xs">|</span>
+              <span className="text-[#ffd700] text-xs">{paidCost} USDC paid</span>
+            </div>
+
+            {/* Start navigation button */}
+            <button
+              onClick={() => setPhase("navigating")}
+              className="w-full py-3 rounded-xl font-semibold text-sm transition-all cursor-pointer
+                bg-[#00ff88] text-[#0a0f1e] hover:bg-[#00e077] active:scale-[0.98]"
+            >
+              Start Navigation — CityPulse Route
+            </button>
+
+            <button
+              onClick={handleClear}
+              className="w-full py-2 mt-2 rounded-xl text-xs text-[#8892a4] hover:text-[#f0f4f8] transition-colors cursor-pointer"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* NAVIGATING PHASE: Turn-by-turn directions */}
       {phase === "navigating" && paidRoute && (
         <NavigationCard
           route={paidRoute}
