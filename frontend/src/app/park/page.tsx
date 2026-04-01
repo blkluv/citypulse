@@ -143,12 +143,18 @@ export default function ParkPage() {
             ) : (
               <button
                 onClick={wallet.connect}
-                className="text-xs text-[#00f0ff] hover:text-[#00d4e0] cursor-pointer"
+                disabled={wallet.isConnecting}
+                className="text-xs text-[#00f0ff] hover:text-[#00d4e0] cursor-pointer disabled:opacity-50"
               >
-                Connect Wallet
+                {wallet.isConnecting ? "Connecting..." : "Connect Wallet"}
               </button>
             )}
           </div>
+          {wallet.error && (
+            <div className="absolute top-full right-0 mt-2 bg-[#ff4060]/20 backdrop-blur-xl rounded-lg px-3 py-2 border border-[#ff4060]/40 max-w-xs">
+              <span className="text-[10px] text-[#ff4060]">{wallet.error}</span>
+            </div>
+          )}
         </div>
       </div>
 
