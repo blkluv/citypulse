@@ -443,8 +443,28 @@ export default function DrivePage() {
         />
       )}
 
-      {/* Wallet indicator — always visible */}
-      <div className="absolute top-3 right-3 z-[1000]">
+      {/* Top bar — nav + wallet */}
+      <div className="absolute top-3 left-3 right-3 z-[1000] flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <a href="/" className="bg-[#0a0f1e]/90 backdrop-blur-xl rounded-xl px-3 py-2 border border-[#2a3040] text-sm font-bold">
+            <span className="text-[#00f0ff]">City</span><span className="text-[#f0f4f8]">Pulse</span>
+          </a>
+          <a
+            href="/"
+            className="bg-[#0a0f1e]/90 backdrop-blur-xl rounded-xl px-3 py-2 border border-[#2a3040] text-xs text-[#8892a4] hover:text-[#f0f4f8] transition-colors"
+          >
+            Dashboard
+          </a>
+          <span className="bg-[#00f0ff]/10 backdrop-blur-xl rounded-xl px-3 py-2 border border-[#00f0ff]/20 text-xs text-[#00f0ff] font-medium">
+            Drive
+          </span>
+          <a
+            href="/park"
+            className="bg-[#0a0f1e]/90 backdrop-blur-xl rounded-xl px-3 py-2 border border-[#2a3040] text-xs text-[#a855f7] hover:bg-[#a855f7]/10 transition-colors"
+          >
+            Park
+          </a>
+        </div>
         <div className="bg-[#0a0f1e]/90 backdrop-blur-xl rounded-xl px-3 py-2 border border-[#2a3040]">
           {wallet.address ? (
             <span className="text-xs text-[#00ff88] font-mono">
