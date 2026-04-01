@@ -16,12 +16,16 @@ function computeZoneData(vehicles: MunicipalVehicle[]): ZoneData[] {
   const zoneMap = new Map<string, { totalSpeed: number; count: number }>();
 
   for (const v of vehicles) {
-    const existing = zoneMap.get(v.zone);
+    // Filter out empty or unknown zone names
+    const zone = v.zone && v.zone !== "Unknown" ? v.zone : null;
+    if (!zone) continue;
+
+    const existing = zoneMap.get(zone);
     if (existing) {
       existing.totalSpeed += v.speed;
       existing.count += 1;
     } else {
-      zoneMap.set(v.zone, { totalSpeed: v.speed, count: 1 });
+      zoneMap.set(zone, { totalSpeed: v.speed, count: 1 });
     }
   }
 
@@ -34,6 +38,7 @@ function computeZoneData(vehicles: MunicipalVehicle[]): ZoneData[] {
     });
   });
 
+  // Sort by congestion — slowest (most congested) first
   zones.sort((a, b) => a.avgSpeed - b.avgSpeed);
   return zones;
 }

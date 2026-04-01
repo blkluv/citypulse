@@ -135,13 +135,32 @@ export default function DrivePage() {
     [startPoint, fetchBaseline]
   );
 
+  const [validationError, setValidationError] = useState<string | null>(null);
+
   const handleMapClick = useCallback(
     (lat: number, lng: number) => {
       if (!mapClickMode) return;
+      setValidationError(null);
+
+      // Sea/outside Istanbul check
+      if (lat < 40.80 || lat > 41.30 || lng < 28.50 || lng > 29.40) {
+        setValidationError("Please select a point on land within Istanbul");
+        return;
+      }
+
       const name = getZoneFromCoords(lat, lng);
       if (!startPoint) {
         handleSetStart({ lat, lng }, name);
       } else if (!endPoint) {
+        // Same point check
+        const dist = Math.sqrt(
+          Math.pow((lat - startPoint.lat) * 111000, 2) +
+          Math.pow((lng - startPoint.lng) * 85000, 2)
+        );
+        if (dist < 100) {
+          setValidationError("Start and end points must be different");
+          return;
+        }
         handleSetEnd({ lat, lng }, name);
       }
     },
@@ -160,25 +179,33 @@ export default function DrivePage() {
   }, [clearResult]);
 
   // PAY → then get CityPulse optimized route (x402 flow)
+  const [payInProgress, setPayInProgress] = useState(false);
+
   const handlePay = useCallback(async () => {
-    if (!startPoint || !endPoint || !estimate) return;
-    const fromZone = getZoneFromCoords(startPoint.lat, startPoint.lng);
-    const toZone = getZoneFromCoords(endPoint.lat, endPoint.lng);
+    if (!startPoint || !endPoint || !estimate || payInProgress) return;
 
-    const result = await payForRoute(
-      fromZone,
-      toZone,
-      estimate.vehicleCount,
-      startPoint,
-      endPoint
-    );
+    setPayInProgress(true);
+    try {
+      const fromZone = getZoneFromCoords(startPoint.lat, startPoint.lng);
+      const toZone = getZoneFromCoords(endPoint.lat, endPoint.lng);
 
-    if (result) {
-      setPaidRoute(result);
-      setPaidCost(result.cost || estimate.cost);
-      setPhase("comparison"); // Show both routes first, user confirms to navigate
+      const result = await payForRoute(
+        fromZone,
+        toZone,
+        estimate.vehicleCount,
+        startPoint,
+        endPoint
+      );
+
+      if (result) {
+        setPaidRoute(result);
+        setPaidCost(result.cost || estimate.cost);
+        setPhase("comparison");
+      }
+    } finally {
+      setPayInProgress(false);
     }
-  }, [startPoint, endPoint, estimate, payForRoute]);
+  }, [startPoint, endPoint, estimate, payForRoute, payInProgress]);
 
   const handleEndNavigation = useCallback(() => {
     handleClear();
@@ -430,6 +457,15 @@ export default function DrivePage() {
           )}
         </div>
       </div>
+
+      {/* Validation error */}
+      {validationError && (
+        <div className="absolute top-16 left-1/2 -translate-x-1/2 z-[1000] animate-[drive-card-slide-up_0.3s_ease-out]">
+          <div className="bg-[#ff4060]/20 backdrop-blur-xl rounded-lg px-4 py-2 border border-[#ff4060]/40">
+            <span className="text-xs text-[#ff4060]">{validationError}</span>
+          </div>
+        </div>
+      )}
 
       {/* Map click hint */}
       {mapClickMode && phase === "search" && (!startPoint || !endPoint) && (

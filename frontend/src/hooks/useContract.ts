@@ -54,6 +54,15 @@ export function useContract() {
   }, []);
 
   const connect = useCallback(async () => {
+    // Check MetaMask installed
+    if (typeof window === "undefined" || !window.ethereum) {
+      setState((s) => ({
+        ...s,
+        error: "MetaMask not installed. Please install MetaMask to use CityPulse.",
+      }));
+      return;
+    }
+
     setState((s) => ({ ...s, isConnecting: true, error: null }));
     try {
       const provider = getProvider();
@@ -99,10 +108,19 @@ export function useContract() {
     async (fromZone: string, toZone: string, vehicleCount: number) => {
       const provider = getProvider();
       const signer = await provider.getSigner();
+      const address = await signer.getAddress();
       const contract = new Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
 
       const price = await contract.queryPrice();
       const totalCost = price * BigInt(vehicleCount);
+
+      // Check balance before submitting
+      const balance = await provider.getBalance(address);
+      if (balance < totalCost) {
+        throw new Error(
+          `Insufficient USDC balance. Need ${formatEther(totalCost)} USDC. Get testnet USDC from faucet.circle.com`
+        );
+      }
 
       const tx = await contract.payForRoute(fromZone, toZone, vehicleCount, {
         value: totalCost,
@@ -126,10 +144,34 @@ export function useContract() {
     };
   }, [getProvider]);
 
+  const payForParking = useCallback(
+    async (zone: string) => {
+      const provider = getProvider();
+      const signer = await provider.getSigner();
+      const contract = new Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+
+      const price = await contract.parkingQueryPrice();
+
+      const tx = await contract.payForParking(zone, {
+        value: price,
+      });
+      const receipt = await tx.wait();
+      return { txHash: receipt.hash, cost: formatEther(price) };
+    },
+    [getProvider]
+  );
+
   const getQueryPrice = useCallback(async () => {
     const provider = getProvider();
     const contract = new Contract(CONTRACT_ADDRESS, CONTRACT_ABI, provider);
     const price = await contract.queryPrice();
+    return formatEther(price);
+  }, [getProvider]);
+
+  const getParkingQueryPrice = useCallback(async () => {
+    const provider = getProvider();
+    const contract = new Contract(CONTRACT_ADDRESS, CONTRACT_ABI, provider);
+    const price = await contract.parkingQueryPrice();
     return formatEther(price);
   }, [getProvider]);
 
@@ -165,7 +207,9 @@ export function useContract() {
     connect,
     disconnect,
     payForRoute,
+    payForParking,
     getStats,
     getQueryPrice,
+    getParkingQueryPrice,
   };
 }

@@ -22,6 +22,13 @@ contract CityPulseX402Test is Test {
         uint256 vehiclesQueried
     );
 
+    event ParkingQueryPaid(
+        address indexed driver,
+        uint256 amount,
+        uint256 timestamp,
+        string zone
+    );
+
     function setUp() public {
         municipality = address(this);
         driver = makeAddr("driver");
@@ -244,6 +251,94 @@ contract CityPulseX402Test is Test {
         assertEq(revenue, cost);
         assertEq(price, QUERY_PRICE);
         assertEq(balance, 0);
+    }
+
+    // ==================== payForParking Tests ====================
+
+    function test_payForParking_correctPayment() public {
+        uint256 parkingPrice = cityPulse.parkingQueryPrice();
+
+        vm.prank(driver);
+        cityPulse.payForParking{value: parkingPrice}("Kadikoy");
+
+        assertEq(cityPulse.totalParkingQueries(), 1);
+        assertEq(address(cityPulse).balance, parkingPrice);
+    }
+
+    function test_payForParking_emitsParkingQueryPaidEvent() public {
+        uint256 parkingPrice = cityPulse.parkingQueryPrice();
+
+        vm.prank(driver);
+        vm.expectEmit(true, false, false, true);
+        emit ParkingQueryPaid(driver, parkingPrice, block.timestamp, "Besiktas");
+        cityPulse.payForParking{value: parkingPrice}("Besiktas");
+    }
+
+    function test_payForParking_insufficientPaymentReverts() public {
+        uint256 parkingPrice = cityPulse.parkingQueryPrice();
+
+        vm.prank(driver);
+        vm.expectRevert("Insufficient payment");
+        cityPulse.payForParking{value: parkingPrice - 1}("Taksim");
+    }
+
+    function test_payForParking_excessRefunded() public {
+        uint256 parkingPrice = cityPulse.parkingQueryPrice();
+        uint256 overpay = parkingPrice * 10;
+        uint256 driverBefore = driver.balance;
+
+        vm.prank(driver);
+        cityPulse.payForParking{value: overpay}("Eminonu");
+
+        assertEq(address(cityPulse).balance, parkingPrice);
+        assertEq(driver.balance, driverBefore - parkingPrice);
+    }
+
+    function test_payForParking_defaultPriceIsOnetenthOfQueryPrice() public view {
+        assertEq(cityPulse.parkingQueryPrice(), QUERY_PRICE / 10);
+    }
+
+    function test_setParkingQueryPrice_onlyMunicipality() public {
+        vm.prank(stranger);
+        vm.expectRevert("Only municipality");
+        cityPulse.setParkingQueryPrice(500);
+    }
+
+    function test_setParkingQueryPrice_updatesPrice() public {
+        uint256 newPrice = 500;
+        cityPulse.setParkingQueryPrice(newPrice);
+        assertEq(cityPulse.parkingQueryPrice(), newPrice);
+    }
+
+    function test_getStats_includesParkingQueries() public {
+        // Route payment
+        uint256 routeCost = QUERY_PRICE * 2;
+        vm.prank(driver);
+        cityPulse.payForRoute{value: routeCost}("A", "B", 2);
+
+        // Parking payment
+        uint256 parkingPrice = cityPulse.parkingQueryPrice();
+        vm.prank(driver);
+        cityPulse.payForParking{value: parkingPrice}("C");
+
+        (uint256 queries, uint256 revenue, , ) = cityPulse.getStats();
+        // getStats returns totalQueries + totalParkingQueries
+        assertEq(queries, 2); // 1 route + 1 parking
+        assertEq(revenue, routeCost + parkingPrice);
+    }
+
+    function test_getParkingStats_returnsCorrectValues() public {
+        uint256 parkingPrice = cityPulse.parkingQueryPrice();
+
+        vm.prank(driver);
+        cityPulse.payForParking{value: parkingPrice}("X");
+
+        vm.prank(driver);
+        cityPulse.payForParking{value: parkingPrice}("Y");
+
+        (uint256 parkingQueries, uint256 pPrice) = cityPulse.getParkingStats();
+        assertEq(parkingQueries, 2);
+        assertEq(pPrice, parkingPrice);
     }
 
     // ==================== Receive Native Token ====================

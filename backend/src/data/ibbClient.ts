@@ -54,6 +54,13 @@ class IBBDataClient {
     return cached.data as T;
   }
 
+  // Get stale cached data (ignores TTL) — used as fallback when API is down
+  private getStaleCached<T>(key: string): T | null {
+    const cached = this.cache.get(key);
+    if (!cached) return null;
+    return cached.data as T;
+  }
+
   private setCache(key: string, data: unknown): void {
     this.cache.set(key, { data, fetchedAt: Date.now() });
   }
@@ -83,6 +90,11 @@ class IBBDataClient {
       return result;
     } catch (err) {
       console.error("[IBB] Traffic index fetch failed:", err);
+      const stale = this.getStaleCached<IBBTrafficIndex[]>("trafficIndex");
+      if (stale) {
+        console.log("[IBB] Returning stale cached traffic index data");
+        return stale;
+      }
       return [];
     }
   }
@@ -143,6 +155,11 @@ class IBBDataClient {
       return this.parseBusData(buses);
     } catch (err) {
       console.error("[IBB] Bus positions fetch failed:", err);
+      const stale = this.getStaleCached<IBBBusPosition[]>("busPositions");
+      if (stale) {
+        console.log("[IBB] Returning stale cached bus positions");
+        return stale;
+      }
       return [];
     }
   }
@@ -209,6 +226,11 @@ class IBBDataClient {
       return result;
     } catch (err) {
       console.error("[IBB] Incidents fetch failed:", err);
+      const stale = this.getStaleCached<IBBIncident[]>("incidents");
+      if (stale) {
+        console.log("[IBB] Returning stale cached incidents");
+        return stale;
+      }
       return [];
     }
   }
@@ -247,6 +269,11 @@ class IBBDataClient {
       return result;
     } catch (err) {
       console.error("[IBB] Parking data fetch failed:", err);
+      const stale = this.getStaleCached<IBBParking[]>("parking");
+      if (stale) {
+        console.log("[IBB] Returning stale cached parking data");
+        return stale;
+      }
       return [];
     }
   }

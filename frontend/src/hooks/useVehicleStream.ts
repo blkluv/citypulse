@@ -11,6 +11,7 @@ export function useVehicleStream() {
   const [vehicles, setVehicles] = useState<MunicipalVehicle[]>([]);
   const [payments, setPayments] = useState<PaymentEvent[]>([]);
   const [connected, setConnected] = useState(false);
+  const [reconnecting, setReconnecting] = useState(false);
   const socketRef = useRef<Socket | null>(null);
 
   const addPayment = useCallback((payment: PaymentEvent) => {
@@ -25,16 +26,28 @@ export function useVehicleStream() {
       transports: ["websocket", "polling"],
       reconnection: true,
       reconnectionDelay: 1000,
+      reconnectionDelayMax: 30000,
+      reconnectionAttempts: Infinity,
     });
 
     socketRef.current = socket;
 
     socket.on("connect", () => {
       setConnected(true);
+      setReconnecting(false);
     });
 
     socket.on("disconnect", () => {
       setConnected(false);
+      setReconnecting(true);
+    });
+
+    socket.io.on("reconnect_attempt", () => {
+      setReconnecting(true);
+    });
+
+    socket.io.on("reconnect", () => {
+      setReconnecting(false);
     });
 
     socket.on("vehicle_update", (data: { timestamp: number; vehicles: MunicipalVehicle[] } | MunicipalVehicle[]) => {
@@ -50,8 +63,8 @@ export function useVehicleStream() {
       const payment: PaymentEvent = {
         driver: (data.from as string) || (data.driver as string) || "0x???",
         amount: String(data.amount || "0.0001"),
-        fromZone: (data.fromZone as string) || (data.zone as string) || "Unknown",
-        toZone: (data.toZone as string) || "Unknown",
+        fromZone: (data.fromZone as string) || (data.zone as string) || "Istanbul",
+        toZone: (data.toZone as string) || "Istanbul",
         vehiclesQueried: (data.vehiclesQueried as number) || Math.floor(Math.random() * 5) + 1,
         savedMinutes: (data.savedMinutes as number) || Math.floor(Math.random() * 20) + 3,
         timestamp: (data.timestamp as number) || Date.now(),
@@ -66,8 +79,8 @@ export function useVehicleStream() {
       const payment: PaymentEvent = {
         driver: (data.from as string) || (data.driver as string) || "0x???",
         amount: String(data.amount || "0.0001"),
-        fromZone: (data.fromZone as string) || (data.zone as string) || "Unknown",
-        toZone: (data.toZone as string) || "Unknown",
+        fromZone: (data.fromZone as string) || (data.zone as string) || "Istanbul",
+        toZone: (data.toZone as string) || "Istanbul",
         vehiclesQueried: (data.vehiclesQueried as number) || 0,
         savedMinutes: (data.savedMinutes as number) || 0,
         timestamp: (data.timestamp as number) || Date.now(),
@@ -83,5 +96,5 @@ export function useVehicleStream() {
     };
   }, [addPayment]);
 
-  return { vehicles, payments, connected };
+  return { vehicles, payments, connected, reconnecting };
 }

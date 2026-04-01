@@ -39,25 +39,40 @@ function getVehicleEmoji(type: MunicipalVehicle["type"]): string {
 }
 
 function createVehicleIcon(vehicle: MunicipalVehicle): L.DivIcon {
-  const speedColor = getSpeedColor(vehicle.speed);
   const typeColor = VEHICLE_COLORS[vehicle.type] || "#6b7280";
-  const animClass = getAnimationClass(vehicle.speed);
   const letter = getVehicleEmoji(vehicle.type);
+  const isAmbulance = vehicle.type === "ambulance";
 
   const isLive = vehicle.source === "ibb";
   const badgeLabel = isLive ? "LIVE" : "SIM";
   const badgeBg = isLive ? "#00ff88" : "#3b82f6";
   const badgeOpacity = isLive ? "1" : "0.6";
 
+  // Ambulance gets special pulsing red glow
+  const pulseStyle = isAmbulance
+    ? `animation:ambulance-pulse 1s ease-in-out infinite;`
+    : "";
+  const glowShadow = isAmbulance
+    ? `box-shadow:0 0 12px ${typeColor}80, 0 0 24px ${typeColor}40;`
+    : `box-shadow:0 0 6px ${typeColor}40;`;
+
   return L.divIcon({
     className: "vehicle-marker-container",
     html: `
-      <div class="vehicle-marker ${animClass}" style="position:relative;width:24px;height:24px;">
+      <style>
+        @keyframes ambulance-pulse {
+          0%, 100% { transform: scale(1); opacity: 1; }
+          50% { transform: scale(1.3); opacity: 0.7; }
+        }
+      </style>
+      <div style="position:relative;width:26px;height:26px;">
         <div style="
           position:absolute;inset:0;
           border-radius:50%;
-          background:${speedColor}33;
-          border:2px solid ${speedColor};
+          background:${typeColor}25;
+          border:2px solid ${typeColor};
+          ${glowShadow}
+          ${pulseStyle}
         "></div>
         <div style="
           position:absolute;
@@ -85,8 +100,8 @@ function createVehicleIcon(vehicle: MunicipalVehicle): L.DivIcon {
         ">${badgeLabel}</div>
       </div>
     `,
-    iconSize: [24, 24],
-    iconAnchor: [12, 12],
+    iconSize: [26, 26],
+    iconAnchor: [13, 13],
   });
 }
 

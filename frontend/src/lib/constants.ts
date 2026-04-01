@@ -14,11 +14,11 @@ export const TILE_ATTRIBUTION =
   '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>';
 
 export const VEHICLE_COLORS: Record<string, string> = {
-  bus: "#3b82f6",
-  garbage_truck: "#a855f7",
-  service: "#6b7280",
-  ambulance: "#ef4444",
-  police: "#f59e0b",
+  bus: "#3b82f6",        // blue
+  garbage_truck: "#22c55e", // green
+  service: "#f97316",    // orange
+  ambulance: "#ef4444",  // red
+  police: "#a855f7",     // purple
 };
 
 export const ARCSCAN_URL =

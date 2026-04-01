@@ -2,6 +2,21 @@ import { Request, Response, NextFunction } from "express";
 import { x402Verifier } from "./verifier.js";
 import { ethers } from "ethers";
 
+// Extend Request to include parking payment info
+declare global {
+  namespace Express {
+    interface Request {
+      parkingPaymentInfo?: {
+        txHash: string;
+        from: string;
+        amount: string;
+        zone: string;
+        demoMode: boolean;
+      };
+    }
+  }
+}
+
 // Extend Request to include payment info
 declare global {
   namespace Express {
@@ -32,6 +47,10 @@ const ENDPOINT_PRICES: Record<string, { amount: string; description: string }> =
   "/api/route": {
     amount: "0.005",
     description: "AI-optimized route with live traffic data from 40 vehicles",
+  },
+  "/api/parking/availability": {
+    amount: "0.0001",
+    description: "Real-time parking availability from ISPARK (262+ facilities)",
   },
 };
 
@@ -165,6 +184,106 @@ export function x402Middleware(req: Request, res: Response, next: NextFunction):
       res.status(500).json({
         status: 500,
         message: "Payment verification error",
+        error: message,
+      });
+    });
+}
+
+/**
+ * x402 parking payment middleware.
+ * Verifies ParkingQueryPaid events instead of QueryPaid.
+ */
+export function x402ParkingMiddleware(req: Request, res: Response, next: NextFunction): void {
+  const demoMode = req.headers["x-demo-mode"] === "true";
+  const txHash = req.headers["x-payment-tx"] as string | undefined;
+
+  if (demoMode) {
+    req.parkingPaymentInfo = {
+      txHash: "0x" + "0".repeat(64),
+      from: "0x" + "d".repeat(40),
+      amount: "0",
+      zone: "demo",
+      demoMode: true,
+    };
+    next();
+    return;
+  }
+
+  if (!txHash) {
+    const price = getPrice("/api/parking/availability");
+    x402Verifier
+      .getContractStats()
+      .then((contractStats) => {
+        res.status(402).json({
+          status: 402,
+          message: "Payment Required",
+          x402: {
+            version: "1.0",
+            scheme: "exact",
+            network: "arc-testnet",
+            chainId: 5042002,
+            currency: "ETH",
+            amount: price.amount,
+            recipient: process.env.CONTRACT_ADDRESS || "0xe551CbbF162e7d3A1fDF4ba994aC01c02176b9a5",
+            description: price.description,
+            paymentHeader: "X-PAYMENT-TX",
+            demoHeader: "X-DEMO-MODE",
+            contractStats,
+          },
+        });
+      })
+      .catch(() => {
+        res.status(402).json({
+          status: 402,
+          message: "Payment Required",
+          x402: {
+            version: "1.0",
+            scheme: "exact",
+            network: "arc-testnet",
+            chainId: 5042002,
+            currency: "ETH",
+            amount: price.amount,
+            recipient: process.env.CONTRACT_ADDRESS || "0xe551CbbF162e7d3A1fDF4ba994aC01c02176b9a5",
+            description: price.description,
+          },
+        });
+      });
+    return;
+  }
+
+  if (!/^0x[a-fA-F0-9]{64}$/.test(txHash)) {
+    res.status(402).json({
+      status: 402,
+      message: "Invalid transaction hash format",
+    });
+    return;
+  }
+
+  x402Verifier
+    .verifyParkingPayment(txHash)
+    .then((result) => {
+      if (result.valid && result.payment) {
+        req.parkingPaymentInfo = {
+          txHash,
+          from: result.payment.driver,
+          amount: result.payment.amount,
+          zone: result.payment.zone,
+          demoMode: false,
+        };
+        next();
+      } else {
+        res.status(402).json({
+          status: 402,
+          message: "Parking payment verification failed",
+          error: result.error,
+        });
+      }
+    })
+    .catch((err: unknown) => {
+      const message = err instanceof Error ? err.message : String(err);
+      res.status(500).json({
+        status: 500,
+        message: "Parking payment verification error",
         error: message,
       });
     });

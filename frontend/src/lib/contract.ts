@@ -15,6 +15,15 @@ export const CONTRACT_ABI = [
     type: "function",
   },
   {
+    inputs: [
+      { internalType: "string", name: "zone", type: "string" },
+    ],
+    name: "payForParking",
+    outputs: [],
+    stateMutability: "payable",
+    type: "function",
+  },
+  {
     inputs: [],
     name: "withdraw",
     outputs: [],
@@ -26,6 +35,15 @@ export const CONTRACT_ABI = [
       { internalType: "uint256", name: "newPrice", type: "uint256" },
     ],
     name: "setQueryPrice",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      { internalType: "uint256", name: "_newPrice", type: "uint256" },
+    ],
+    name: "setParkingQueryPrice",
     outputs: [],
     stateMutability: "nonpayable",
     type: "function",
@@ -44,6 +62,16 @@ export const CONTRACT_ABI = [
   },
   {
     inputs: [],
+    name: "getParkingStats",
+    outputs: [
+      { internalType: "uint256", name: "_totalParkingQueries", type: "uint256" },
+      { internalType: "uint256", name: "_parkingQueryPrice", type: "uint256" },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
     name: "queryPrice",
     outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
     stateMutability: "view",
@@ -51,7 +79,21 @@ export const CONTRACT_ABI = [
   },
   {
     inputs: [],
+    name: "parkingQueryPrice",
+    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
     name: "totalQueries",
+    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "totalParkingQueries",
     outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
     stateMutability: "view",
     type: "function",
@@ -81,6 +123,17 @@ export const CONTRACT_ABI = [
       { indexed: false, internalType: "uint256", name: "vehiclesQueried", type: "uint256" },
     ],
     name: "QueryPaid",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      { indexed: true, internalType: "address", name: "driver", type: "address" },
+      { indexed: false, internalType: "uint256", name: "amount", type: "uint256" },
+      { indexed: false, internalType: "uint256", name: "timestamp", type: "uint256" },
+      { indexed: false, internalType: "string", name: "zone", type: "string" },
+    ],
+    name: "ParkingQueryPaid",
     type: "event",
   },
 ] as const;

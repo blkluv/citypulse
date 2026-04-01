@@ -72,10 +72,12 @@ export function setupWebSocket(
   });
 
   // Broadcast vehicle updates every 500ms
+  // Track which clients have focus for potential debouncing
   setInterval(() => {
+    const publicData = simulator.getPublicData();
     io.emit("vehicle_update", {
       timestamp: Date.now(),
-      vehicles: simulator.getPublicData(),
+      vehicles: publicData,
     });
   }, 500);
 

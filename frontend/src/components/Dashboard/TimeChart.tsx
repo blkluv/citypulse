@@ -23,9 +23,14 @@ export function TimeChart({ data }: TimeChartProps) {
         <h3 className="text-xs uppercase tracking-wider text-[#8892a4]">
           Queries / Hour (24h)
         </h3>
-        <span className="text-xs text-[#00f0ff] font-mono">
-          Now: {currentHour}:00
-        </span>
+        <div className="flex items-center gap-3">
+          <span className="text-[10px] text-[#ffd700] font-mono">
+            Peak: {data.indexOf(max)}:00
+          </span>
+          <span className="text-xs text-[#00f0ff] font-mono">
+            Now: {currentHour}:00
+          </span>
+        </div>
       </div>
       <div className="flex">
         {/* Y-axis labels */}

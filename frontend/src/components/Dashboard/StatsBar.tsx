@@ -45,18 +45,18 @@ function StatCard({ label, value, color, prefix, suffix, verified }: StatCardPro
 
   return (
     <div className="bg-[#1a1f2e] border border-[#2a3040] rounded-lg p-3">
-      <div className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-[#8892a4] mb-1">
+      <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-[#8892a4] mb-1.5">
         {label}
         {verified && (
           <span
-            className="inline-flex items-center justify-center w-3 h-3 rounded-full bg-[#00ff88]/20 text-[#00ff88] text-[7px] font-bold leading-none"
-            title="Verified from contract"
+            className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-[#00ff88]/20 text-[#00ff88] text-[8px] font-bold leading-none"
+            title="Verified on-chain"
           >
             &#10003;
           </span>
         )}
       </div>
-      <div className="font-mono text-lg font-bold" style={{ color }}>
+      <div className="font-mono text-xl font-bold" style={{ color }}>
         {prefix}
         {displayValue}
         {suffix}

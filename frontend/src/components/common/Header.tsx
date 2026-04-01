@@ -49,6 +49,13 @@ export function Header({
           <span className="text-sm">&#x1F697;</span>
           Drive
         </a>
+        <a
+          href="/park"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-[#a855f7]/10 text-[#a855f7] hover:bg-[#a855f7]/20 transition-colors border border-[#a855f7]/20"
+        >
+          <span className="text-sm">&#x1F17F;&#xFE0F;</span>
+          Park
+        </a>
         <DemoModeButton />
         <WalletConnect
           address={address}

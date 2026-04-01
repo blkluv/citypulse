@@ -21,18 +21,24 @@ function timeAgo(timestamp: number): string {
 }
 
 export function PaymentFeed({ payments }: PaymentFeedProps) {
+  // Limit to 50 most recent payments to prevent DOM bloat
+  const displayPayments = payments.slice(0, 50);
+
   return (
     <div className="bg-[#1a1f2e] border border-[#2a3040] rounded-lg p-3 mb-4">
       <h3 className="text-xs uppercase tracking-wider text-[#8892a4] mb-3">
         Recent Payments
+        {payments.length > 0 && (
+          <span className="ml-2 text-[#00f0ff]">({payments.length})</span>
+        )}
       </h3>
       <div className="space-y-2 max-h-60 overflow-y-auto custom-scrollbar">
-        {payments.length === 0 ? (
+        {displayPayments.length === 0 ? (
           <div className="text-xs text-[#8892a4] text-center py-4">
             No payments yet
           </div>
         ) : (
-          payments.map((p, i) => (
+          displayPayments.map((p, i) => (
             <div
               key={`${p.driver}-${p.timestamp}-${i}`}
               className="flex flex-col gap-1 p-2 rounded bg-[#111827] border border-[#2a3040]/50 payment-slide-in"
@@ -59,7 +65,7 @@ export function PaymentFeed({ payments }: PaymentFeedProps) {
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-[10px] text-[#8892a4]">
-                  {p.fromZone} → {p.toZone}
+                  {p.fromZone || "Istanbul"} &rarr; {p.toZone || "Istanbul"}
                 </span>
                 <span className="text-[10px] text-[#8892a4]">
                   {p.vehiclesQueried} vehicles

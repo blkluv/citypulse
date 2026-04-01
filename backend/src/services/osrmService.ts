@@ -118,11 +118,66 @@ class OSRMService {
       return { routes };
     } catch (err: unknown) {
       if (err instanceof Error && err.name === "AbortError") {
-        return { routes: [], error: "OSRM request timed out (5s)" };
+        console.warn("[OSRM] Request timed out, returning straight-line fallback");
+        return {
+          routes: [this.straightLineFallback(from, to)],
+          error: "OSRM timed out — using estimated route",
+        };
       }
       const message = err instanceof Error ? err.message : String(err);
-      return { routes: [], error: `OSRM fetch failed: ${message}` };
+      console.warn(`[OSRM] Fetch failed: ${message}, returning straight-line fallback`);
+      return {
+        routes: [this.straightLineFallback(from, to)],
+        error: `OSRM unavailable — using estimated route`,
+      };
     }
+  }
+
+  /**
+   * Straight-line fallback when OSRM is unreachable.
+   * Generates intermediate points along a great-circle and estimates duration from distance.
+   */
+  private straightLineFallback(
+    from: { lat: number; lng: number },
+    to: { lat: number; lng: number },
+  ): OSRMRoute {
+    const R = 6371000; // Earth radius in meters
+    const dLat = ((to.lat - from.lat) * Math.PI) / 180;
+    const dLng = ((to.lng - from.lng) * Math.PI) / 180;
+    const a =
+      Math.sin(dLat / 2) ** 2 +
+      Math.cos((from.lat * Math.PI) / 180) *
+        Math.cos((to.lat * Math.PI) / 180) *
+        Math.sin(dLng / 2) ** 2;
+    const distance = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    // Estimate duration: avg Istanbul city speed ~25 km/h
+    const duration = (distance / 1000 / 25) * 3600; // seconds
+
+    // Generate 10 intermediate points
+    const points: [number, number][] = [];
+    const steps = 10;
+    for (let i = 0; i <= steps; i++) {
+      const t = i / steps;
+      points.push([
+        from.lat + (to.lat - from.lat) * t,
+        from.lng + (to.lng - from.lng) * t,
+      ]);
+    }
+
+    return {
+      distance,
+      duration,
+      geometry: points,
+      legs: [{
+        steps: [{
+          distance,
+          duration,
+          name: "Estimated route",
+          maneuver: { type: "depart", modifier: "straight" },
+        }],
+      }],
+    };
   }
 }
 

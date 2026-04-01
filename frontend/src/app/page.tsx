@@ -70,7 +70,7 @@ const HOURLY_DATA = [
 ];
 
 export default function Home() {
-  const { vehicles, payments, connected: wsConnected } = useVehicleStream();
+  const { vehicles, payments, connected: wsConnected, reconnecting } = useVehicleStream();
   const {
     loading: paymentLoading,
     error: paymentError,
@@ -126,11 +126,30 @@ export default function Home() {
     [vehicles]
   );
 
+  const [mapError, setMapError] = useState<string | null>(null);
+
   const handleMapClick = useCallback(
     (lat: number, lng: number) => {
+      setMapError(null);
+
+      // Sea/outside Istanbul check
+      if (lat < 40.80 || lat > 41.30 || lng < 28.50 || lng > 29.40) {
+        setMapError("Please select a point on land within Istanbul");
+        return;
+      }
+
       if (!startPoint) {
         setStartPoint([lat, lng]);
       } else if (!endPoint) {
+        // Same point validation
+        const dist = Math.sqrt(
+          Math.pow((lat - startPoint[0]) * 111000, 2) +
+          Math.pow((lng - startPoint[1]) * 85000, 2)
+        );
+        if (dist < 100) { // less than 100m apart
+          setMapError("Start and end points must be different");
+          return;
+        }
         setEndPoint([lat, lng]);
         setShowPaymentPopup(true);
       }
@@ -145,20 +164,29 @@ export default function Home() {
     clearResult();
   }, [clearResult]);
 
+  const [payingInProgress, setPayingInProgress] = useState(false);
+
   const handlePay = useCallback(async () => {
-    if (!startPoint || !endPoint) return;
-    const fromZone = getZoneFromCoords(startPoint[0], startPoint[1]);
-    const toZone = getZoneFromCoords(endPoint[0], endPoint[1]);
-    const vehicleCount = Math.max(1, Math.min(vehicles.length, 10));
-    await payForRoute(
-      fromZone,
-      toZone,
-      vehicleCount,
-      { lat: startPoint[0], lng: startPoint[1] },
-      { lat: endPoint[0], lng: endPoint[1] }
-    );
-    setShowPaymentPopup(false);
-  }, [startPoint, endPoint, vehicles.length, payForRoute]);
+    if (!startPoint || !endPoint || payingInProgress) return;
+    if (!wallet.address) return; // require wallet connection
+
+    setPayingInProgress(true);
+    try {
+      const fromZone = getZoneFromCoords(startPoint[0], startPoint[1]);
+      const toZone = getZoneFromCoords(endPoint[0], endPoint[1]);
+      const vehicleCount = Math.max(1, Math.min(vehicles.length, 10));
+      await payForRoute(
+        fromZone,
+        toZone,
+        vehicleCount,
+        { lat: startPoint[0], lng: startPoint[1] },
+        { lat: endPoint[0], lng: endPoint[1] }
+      );
+      setShowPaymentPopup(false);
+    } finally {
+      setPayingInProgress(false);
+    }
+  }, [startPoint, endPoint, vehicles.length, payForRoute, payingInProgress, wallet.address]);
 
   const handleCancelPayment = useCallback(() => {
     setShowPaymentPopup(false);
@@ -207,6 +235,13 @@ export default function Home() {
         onDisconnect={wallet.disconnect}
         wsConnected={wsConnected}
       />
+
+      {/* Reconnecting banner */}
+      {reconnecting && (
+        <div className="fixed top-[52px] left-0 right-0 z-[999] bg-[#ffd700]/20 backdrop-blur-sm px-4 py-1.5 text-center border-b border-[#ffd700]/30">
+          <span className="text-xs text-[#ffd700]">Reconnecting to live data...</span>
+        </div>
+      )}
 
       {/* Main content */}
       <div className="flex flex-1 pt-[52px] pb-8">
@@ -271,6 +306,15 @@ export default function Home() {
               />
             )}
           </div>
+
+          {/* Map validation error */}
+          {mapError && (
+            <div className="absolute top-16 left-1/2 -translate-x-1/2 z-[900] animate-[drive-card-slide-up_0.3s_ease-out]">
+              <div className="bg-[#ff4060]/20 backdrop-blur-xl rounded-lg px-4 py-2 border border-[#ff4060]/40">
+                <span className="text-xs text-[#ff4060]">{mapError}</span>
+              </div>
+            </div>
+          )}
 
           {/* Payment popup */}
           {showPaymentPopup && startPoint && endPoint && (

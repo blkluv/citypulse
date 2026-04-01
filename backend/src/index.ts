@@ -12,6 +12,7 @@ import { setupWebSocket } from "./websocket/vehicleStream.js";
 import { eventStream } from "./services/eventStream.js";
 import { demoSimulator } from "./services/demoSimulator.js";
 import { createIBBRoutes } from "./routes/ibbRoutes.js";
+import { createParkingRoutes } from "./routes/parkingRoutes.js";
 
 // --- Initialize ---
 const app = express();
@@ -31,6 +32,7 @@ app.use("/api/route", createRouteOptimizerRoutes(simulator));
 app.use("/api/dashboard", createDashboardRoutes(simulator));
 app.use("/api/demo", demoRoutes);
 app.use("/api/ibb", createIBBRoutes());
+app.use("/api/parking", createParkingRoutes());
 
 // Health check
 app.get("/api/health", (_req, res) => {
@@ -70,6 +72,11 @@ app.get("/", (_req, res) => {
         "GET /api/traffic/vehicles": "Real-time vehicle positions (0.001 ETH)",
         "GET /api/traffic/zone/:zone": "Zone traffic data (0.0005 ETH)",
         "POST /api/route": "Optimized routing (0.005 ETH)",
+      },
+      parking: {
+        "GET /api/parking/nearby?lat=&lng=&radius=": "Nearby parking lots (free, no availability)",
+        "GET /api/parking/availability?lat=&lng=&radius=": "Live parking availability (x402, 0.0001 USDC)",
+        "GET /api/parking/stats": "Parking query statistics",
       },
       ibb: {
         "GET /api/ibb/traffic-index": "Real-time IBB traffic congestion index",
