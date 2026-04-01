@@ -93,7 +93,7 @@ export default function ParkPage() {
     <div className="h-screen w-screen overflow-hidden bg-[#0a0f1e] relative">
       {/* Full-screen map */}
       <DynamicParkMap
-        lockedLots={nearbyLots}
+        lockedLots={[]}
         unlockedLots={unlockedLots}
         unlocked={unlocked}
         searchCenter={searchCenter}
@@ -197,42 +197,14 @@ export default function ParkPage() {
               </button>
             </div>
 
-            <div className="p-3 rounded-lg bg-[#374151]/30 border border-[#374151] mb-4">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[#f0f4f8] text-sm">
-                  {nearbyLots.length} parking lots found
-                </span>
-                <span className="text-[10px] text-[#8892a4] bg-[#2a3040] px-1.5 py-0.5 rounded">
-                  within {searchRadius}m
-                </span>
-              </div>
-              <div className="flex items-center gap-2 text-[#ffd700] text-xs">
+            <div className="p-4 rounded-lg bg-[#374151]/30 border border-[#374151] mb-4 text-center">
+              <div className="text-3xl font-bold text-[#00f0ff] mb-2">{nearbyLots.length}</div>
+              <div className="text-[#f0f4f8] text-sm mb-1">parking lots found nearby</div>
+              <div className="text-[10px] text-[#8892a4]">within {searchRadius}m radius</div>
+              <div className="flex items-center justify-center gap-2 text-[#ffd700] text-xs mt-3 pt-3 border-t border-[#374151]">
                 <span>&#x1F512;</span>
-                <span>Live availability locked</span>
+                <span>Pay to see locations &amp; live availability</span>
               </div>
-            </div>
-
-            {/* Preview first 3 lots (locked) */}
-            <div className="space-y-1.5 mb-4 max-h-28 overflow-y-auto">
-              {nearbyLots.slice(0, 3).map((lot) => (
-                <div
-                  key={lot.id}
-                  className="flex items-center justify-between p-2 rounded-lg bg-[#374151]/20"
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="text-[#6b7280]">&#x1F512;</span>
-                    <span className="text-[#f0f4f8] text-xs truncate max-w-[200px]">
-                      {lot.name}
-                    </span>
-                  </div>
-                  <span className="text-[#8892a4] text-[10px]">{lot.distance}m</span>
-                </div>
-              ))}
-              {nearbyLots.length > 3 && (
-                <div className="text-[#8892a4] text-[10px] text-center">
-                  +{nearbyLots.length - 3} more
-                </div>
-              )}
             </div>
 
             {/* Unlock button */}
