@@ -25,16 +25,6 @@ export function useContract() {
     error: null,
   });
 
-  const getProvider = useCallback(() => {
-    if (typeof window === "undefined" || !window.ethereum) {
-      throw new Error("MetaMask not found");
-    }
-    const provider = new BrowserProvider(window.ethereum, arcNetwork);
-    // Arc Testnet has no ENS — override resolveName to skip ENS lookup entirely
-    provider.resolveName = async (name: string) => name;
-    return provider;
-  }, []);
-
   const switchToArc = useCallback(async () => {
     if (!window.ethereum) return;
     try {
@@ -53,6 +43,17 @@ export function useContract() {
     }
   }, []);
 
+  // Create provider AFTER ensuring we're on Arc Testnet
+  const getProvider = useCallback(() => {
+    if (typeof window === "undefined" || !window.ethereum) {
+      throw new Error("MetaMask not found");
+    }
+    const provider = new BrowserProvider(window.ethereum, arcNetwork);
+    // Arc Testnet has no ENS — override resolveName to skip ENS lookup entirely
+    provider.resolveName = async (name: string) => name;
+    return provider;
+  }, []);
+
   const connect = useCallback(async () => {
     // Check MetaMask installed
     if (typeof window === "undefined" || !window.ethereum) {
@@ -65,31 +66,45 @@ export function useContract() {
 
     setState((s) => ({ ...s, isConnecting: true, error: null }));
     try {
+      // 1. Request account access first (no network constraint)
+      const rawProvider = new BrowserProvider(window.ethereum);
+      await rawProvider.send("eth_requestAccounts", []);
+
+      // 2. Check current chain
+      const network = await rawProvider.getNetwork();
+      const currentChainId = Number(network.chainId);
+
+      // 3. Switch to Arc Testnet if needed
+      if (currentChainId !== ARC_TESTNET.id) {
+        await switchToArc();
+        // Wait a moment for MetaMask to complete the switch
+        await new Promise((r) => setTimeout(r, 500));
+      }
+
+      // 4. Now create provider with Arc network constraint
       const provider = getProvider();
-      await provider.send("eth_requestAccounts", []);
       const signer = await provider.getSigner();
       const address = await signer.getAddress();
       const balance = formatEther(await provider.getBalance(address));
-      const network = await provider.getNetwork();
-      const chainId = Number(network.chainId);
 
       setState({
         address,
         balance,
-        chainId,
+        chainId: ARC_TESTNET.id,
         isConnecting: false,
         error: null,
       });
-
-      if (chainId !== ARC_TESTNET.id) {
-        await switchToArc();
-      }
     } catch (err: unknown) {
       const error = err as Error;
+      const msg = error.message || "Failed to connect";
+      // Friendly message for network errors
+      const friendly = msg.includes("NETWORK_ERROR")
+        ? "Please switch MetaMask to Arc Testnet and try again"
+        : msg;
       setState((s) => ({
         ...s,
         isConnecting: false,
-        error: error.message || "Failed to connect",
+        error: friendly,
       }));
     }
   }, [getProvider, switchToArc]);
