@@ -13,6 +13,8 @@ import { eventStream } from "./services/eventStream.js";
 import { demoSimulator } from "./services/demoSimulator.js";
 import { createIBBRoutes } from "./routes/ibbRoutes.js";
 import { createParkingRoutes } from "./routes/parkingRoutes.js";
+import { createNanopaymentRoutes } from "./routes/nanopaymentRoutes.js";
+import { createCircleRoutes } from "./routes/circleRoutes.js";
 
 // --- Initialize ---
 const app = express();
@@ -33,6 +35,8 @@ app.use("/api/dashboard", createDashboardRoutes(simulator));
 app.use("/api/demo", demoRoutes);
 app.use("/api/ibb", createIBBRoutes());
 app.use("/api/parking", createParkingRoutes());
+app.use("/api/nanopayments", createNanopaymentRoutes());
+app.use("/api/circle", createCircleRoutes());
 
 // Health check
 app.get("/api/health", (_req, res) => {

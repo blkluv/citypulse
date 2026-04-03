@@ -90,10 +90,16 @@ export function x402Middleware(req: Request, res: Response, next: NextFunction):
   if (!txHash) {
     const price = getPrice(req.path);
 
-    // Fetch contract stats for richer 402 response
+    // Fetch contract stats for richer 402 response (x402 protocol compliant)
     x402Verifier
       .getContractStats()
       .then((contractStats) => {
+        // Set x402 protocol headers
+        res.setHeader("X-Payment-Protocol", "x402");
+        res.setHeader("X-Payment-Network", "arc-testnet");
+        res.setHeader("X-Payment-Currency", "USDC");
+        res.setHeader("X-Payment-Amount", price.amount);
+
         res.status(402).json({
           status: 402,
           message: "Payment Required",
@@ -102,12 +108,19 @@ export function x402Middleware(req: Request, res: Response, next: NextFunction):
             scheme: "exact",
             network: "arc-testnet",
             chainId: 5042002,
-            currency: "ETH",
+            currency: "USDC",
+            asset: "USDC (native on Arc)",
             amount: price.amount,
             recipient: process.env.CONTRACT_ADDRESS || "0xe551CbbF162e7d3A1fDF4ba994aC01c02176b9a5",
             description: price.description,
             paymentHeader: "X-PAYMENT-TX",
             demoHeader: "X-DEMO-MODE",
+            nanopayments: {
+              provider: "Circle Nanopayments",
+              subCent: true,
+              gasless: "Arc native USDC — negligible gas costs",
+              infoEndpoint: "/api/nanopayments/info",
+            },
             endpoints: ENDPOINT_PRICES,
             contractStats,
           },
