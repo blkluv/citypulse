@@ -3,11 +3,14 @@ import { config } from "../config.js";
 
 const CITYPULSE_ABI = [
   "event QueryPaid(address indexed driver, uint256 amount, uint256 timestamp, string fromZone, string toZone, uint256 vehiclesQueried)",
-  "event ParkingQueryPaid(address indexed driver, uint256 amount, uint256 timestamp, string zone)",
   "function queryPrice() view returns (uint256)",
+  "function getStats() view returns (uint256, uint256, uint256, uint256)",
+];
+
+const PARKING_ABI = [
+  "event ParkingQueryPaid(address indexed driver, uint256 amount, uint256 timestamp, string zone)",
   "function parkingQueryPrice() view returns (uint256)",
   "function getStats() view returns (uint256, uint256, uint256, uint256)",
-  "function getParkingStats() view returns (uint256, uint256)",
 ];
 
 export interface VerificationResult {
@@ -50,11 +53,13 @@ export interface ContractStats {
 class X402Verifier {
   private provider: ethers.JsonRpcProvider;
   private contract: ethers.Contract;
+  private parkingContract: ethers.Contract;
   private usedTxHashes: Set<string> = new Set();
 
   constructor() {
     this.provider = new ethers.JsonRpcProvider(config.arcTestnetRpcUrl);
     this.contract = new ethers.Contract(config.contractAddress, CITYPULSE_ABI, this.provider);
+    this.parkingContract = new ethers.Contract(config.parkingContractAddress, PARKING_ABI, this.provider);
   }
 
   /** Retry an async operation with exponential backoff. */
@@ -180,11 +185,11 @@ class X402Verifier {
         return { valid: false, error: "Transaction failed on-chain" };
       }
 
-      if (receipt.to?.toLowerCase() !== config.contractAddress.toLowerCase()) {
-        return { valid: false, error: "Transaction not sent to CityPulse contract" };
+      if (receipt.to?.toLowerCase() !== config.parkingContractAddress.toLowerCase()) {
+        return { valid: false, error: "Transaction not sent to CityPulse Parking contract" };
       }
 
-      const iface = new ethers.Interface(CITYPULSE_ABI);
+      const iface = new ethers.Interface(PARKING_ABI);
       let parkingEvent = null;
       for (const log of receipt.logs) {
         try {
@@ -211,7 +216,7 @@ class X402Verifier {
         blockNumber: receipt.blockNumber,
       };
 
-      const parkingPrice = await this.contract.parkingQueryPrice();
+      const parkingPrice = await this.parkingContract.parkingQueryPrice();
       if ((parkingEvent.args[1] as bigint) < (parkingPrice as bigint)) {
         return {
           valid: false,
@@ -243,11 +248,11 @@ class X402Verifier {
       let totalParkingQueries = 0;
       let parkingQueryPrice = "0";
       try {
-        const [pQueries, pPrice] = await this.contract.getParkingStats();
+        const [pQueries, , pPrice] = await this.parkingContract.getStats();
         totalParkingQueries = Number(pQueries);
         parkingQueryPrice = ethers.formatEther(pPrice);
       } catch {
-        // Contract may not have parking functions yet
+        // Parking contract may not be deployed yet
       }
       return {
         totalQueries: Number(totalQueries),

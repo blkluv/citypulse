@@ -24,6 +24,9 @@ export const VEHICLE_COLORS: Record<string, string> = {
 export const ARCSCAN_URL =
   process.env.NEXT_PUBLIC_ARCSCAN_URL || "https://testnet.arcscan.app";
 
+export const PARKING_CONTRACT_ADDRESS =
+  (process.env.NEXT_PUBLIC_PARKING_CONTRACT_ADDRESS || "0x0e702E09164A70F61DFd3f5535D44A105771De9d").trim();
+
 export const ISTANBUL_ZONES = [
   "Fatih",
   "Beyoglu",

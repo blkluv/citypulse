@@ -10,4 +10,5 @@ export const config = {
   demoSimulatorEnabled: process.env.DEMO_SIMULATOR === "true",
   osrmUrl: process.env.OSRM_URL || "https://router.project-osrm.org",
   routeVehicleRadius: parseInt(process.env.ROUTE_VEHICLE_RADIUS_METERS || "300"),
+  parkingContractAddress: process.env.PARKING_CONTRACT_ADDRESS || "0x0e702E09164A70F61DFd3f5535D44A105771De9d",
 };

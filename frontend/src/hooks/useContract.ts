@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect } from "react";
 import { BrowserProvider, Contract, formatEther, Network } from "ethers";
 import { CONTRACT_ABI, CONTRACT_ADDRESS } from "@/lib/contract";
 import { ARC_TESTNET, getArcChainParams } from "@/lib/arc";
+import { PARKING_CONTRACT_ADDRESS } from "@/lib/constants";
 
 // Define Arc network WITHOUT ENS — prevents getEnsAddress calls
 const arcNetwork = new Network("arc-testnet", ARC_TESTNET.id);
@@ -163,11 +164,29 @@ export function useContract() {
     async (zone: string) => {
       const provider = getProvider();
       const signer = await provider.getSigner();
-      const contract = new Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
 
-      const price = await contract.parkingQueryPrice();
+      // Parking uses separate contract
+      const PARKING_ABI = [
+        {
+          inputs: [{ internalType: "string", name: "zone", type: "string" }],
+          name: "payForParking",
+          outputs: [],
+          stateMutability: "payable",
+          type: "function",
+        },
+        {
+          inputs: [],
+          name: "parkingQueryPrice",
+          outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
+          stateMutability: "view",
+          type: "function",
+        },
+      ];
 
-      const tx = await contract.payForParking(zone, {
+      const parkingContract = new Contract(PARKING_CONTRACT_ADDRESS, PARKING_ABI, signer);
+      const price = await parkingContract.parkingQueryPrice();
+
+      const tx = await parkingContract.payForParking(zone, {
         value: price,
       });
       const receipt = await tx.wait();

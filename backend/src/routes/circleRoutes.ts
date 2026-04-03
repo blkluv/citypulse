@@ -175,16 +175,20 @@ export function createCircleRoutes(): Router {
         return;
       }
 
+      const PARKING_ABI = [
+        "function payForParking(string zone) payable",
+        "function parkingQueryPrice() view returns (uint256)",
+      ];
       const provider = new ethers.JsonRpcProvider(config.arcTestnetRpcUrl);
-      const contract = new ethers.Contract(config.contractAddress, CONTRACT_ABI, provider);
-      const parkingPrice = await contract.parkingQueryPrice();
+      const parkingContract = new ethers.Contract(config.parkingContractAddress, PARKING_ABI, provider);
+      const parkingPrice = await parkingContract.parkingQueryPrice();
 
-      const iface = new ethers.Interface(CONTRACT_ABI);
+      const iface = new ethers.Interface(PARKING_ABI);
       const callData = iface.encodeFunctionData("payForParking", [zone]);
 
       const result = await circleWallets.sendContractCall(
         wallet.id,
-        config.contractAddress,
+        config.parkingContractAddress,
         callData,
         ethers.formatEther(parkingPrice as bigint),
       );
