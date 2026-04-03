@@ -1,14 +1,25 @@
 "use client";
 
-import { WalletConnect } from "./WalletConnect";
+import { WalletSelector } from "./WalletSelector";
 import { DemoModeButton } from "./DemoModeButton";
 
 interface HeaderProps {
+  // MetaMask
   address: string | null;
   balance: string;
   isConnecting: boolean;
   onConnect: () => void;
   onDisconnect: () => void;
+  // Circle
+  circleAddress: string | null;
+  circleBalance: string;
+  circleCreating: boolean;
+  onCircleCreate: () => void;
+  onCircleDisconnect: () => void;
+  circleError: string | null;
+  metamaskError: string | null;
+  // Active wallet type
+  activeWallet: "none" | "metamask" | "circle";
   wsConnected: boolean;
 }
 
@@ -18,6 +29,14 @@ export function Header({
   isConnecting,
   onConnect,
   onDisconnect,
+  circleAddress,
+  circleBalance,
+  circleCreating,
+  onCircleCreate,
+  onCircleDisconnect,
+  circleError,
+  metamaskError,
+  activeWallet,
   wsConnected,
 }: HeaderProps) {
   return (
@@ -57,12 +76,20 @@ export function Header({
           Park
         </a>
         <DemoModeButton />
-        <WalletConnect
-          address={address}
-          balance={balance}
-          isConnecting={isConnecting}
-          onConnect={onConnect}
-          onDisconnect={onDisconnect}
+        <WalletSelector
+          metamaskAddress={address}
+          metamaskBalance={balance}
+          metamaskConnecting={isConnecting}
+          onMetamaskConnect={onConnect}
+          onMetamaskDisconnect={onDisconnect}
+          circleAddress={circleAddress}
+          circleBalance={circleBalance}
+          circleCreating={circleCreating}
+          onCircleCreate={onCircleCreate}
+          onCircleDisconnect={onCircleDisconnect}
+          activeWallet={activeWallet}
+          circleError={circleError}
+          metamaskError={metamaskError}
         />
       </div>
     </header>

@@ -12,8 +12,10 @@ import { TimeChart } from "@/components/Dashboard/TimeChart";
 import { DataSources } from "@/components/Dashboard/DataSources";
 import { RouteRequest } from "@/components/RoutePanel/RouteRequest";
 import { RouteResult } from "@/components/RoutePanel/RouteResult";
+import { GatewayBalance } from "@/components/common/GatewayBalance";
 import { useVehicleStream } from "@/hooks/useVehicleStream";
 import { usePayment } from "@/hooks/usePayment";
+import { useCircleWallet } from "@/hooks/useCircleWallet";
 import { ISTANBUL_ZONES, BACKEND_URL } from "@/lib/constants";
 import type { HeatmapPoint, RouteResult as RouteResultType } from "@/types";
 
@@ -80,6 +82,12 @@ export default function Home() {
     clearResult,
     wallet,
   } = usePayment();
+
+  const circleWallet = useCircleWallet();
+
+  // Determine active wallet type
+  const activeWallet: "none" | "metamask" | "circle" =
+    circleWallet.address ? "circle" : wallet.address ? "metamask" : "none";
 
   const [startPoint, setStartPoint] = useState<[number, number] | null>(null);
   const [endPoint, setEndPoint] = useState<[number, number] | null>(null);
@@ -233,6 +241,14 @@ export default function Home() {
         isConnecting={wallet.isConnecting}
         onConnect={wallet.connect}
         onDisconnect={wallet.disconnect}
+        circleAddress={circleWallet.address}
+        circleBalance={circleWallet.balance}
+        circleCreating={circleWallet.isCreating}
+        onCircleCreate={circleWallet.createWallet}
+        onCircleDisconnect={circleWallet.disconnect}
+        circleError={circleWallet.error}
+        metamaskError={wallet.error}
+        activeWallet={activeWallet}
         wsConnected={wsConnected}
       />
 
@@ -339,6 +355,10 @@ export default function Home() {
             avgCitySpeed={avgSpeed}
             savedMinutes={totalSavedMinutes}
             activeVehicles={vehicles.length}
+          />
+          <GatewayBalance
+            address={activeWallet === "circle" ? circleWallet.address : wallet.address}
+            walletType={activeWallet}
           />
           <DataSources
             osrmActive={wsConnected}
