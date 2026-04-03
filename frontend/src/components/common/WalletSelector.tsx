@@ -37,6 +37,7 @@ export function WalletSelector({
   metamaskError,
 }: WalletSelectorProps) {
   const [showSelector, setShowSelector] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   // Connected state — show active wallet
   if (activeWallet !== "none") {
@@ -45,6 +46,14 @@ export function WalletSelector({
     const disconnect = activeWallet === "metamask" ? onMetamaskDisconnect : onCircleDisconnect;
     const label = activeWallet === "metamask" ? "MetaMask" : "Circle";
     const color = activeWallet === "metamask" ? "#f97316" : "#00f0ff";
+
+    const copyAddress = () => {
+      if (address) {
+        navigator.clipboard.writeText(address);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      }
+    };
 
     return (
       <div className="flex items-center gap-2">
@@ -58,9 +67,13 @@ export function WalletSelector({
             {parseFloat(balance).toFixed(4)}
           </span>
           <span className="text-[#8892a4] text-[10px]">|</span>
-          <span className="text-xs text-[#00f0ff] font-mono">
-            {address?.slice(0, 6)}...{address?.slice(-4)}
-          </span>
+          <button
+            onClick={copyAddress}
+            title={address || ""}
+            className="text-xs text-[#00f0ff] font-mono hover:underline cursor-pointer"
+          >
+            {copied ? "Copied!" : `${address?.slice(0, 6)}...${address?.slice(-4)}`}
+          </button>
         </div>
         <button
           onClick={disconnect}
