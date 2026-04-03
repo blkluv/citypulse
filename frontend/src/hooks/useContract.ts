@@ -201,8 +201,17 @@ export function useContract() {
       }
     };
 
-    const handleChainChanged = () => {
-      window.location.reload();
+    const handleChainChanged = (chainIdHex: string) => {
+      const newChainId = parseInt(chainIdHex, 16);
+      if (newChainId !== ARC_TESTNET.id) {
+        setState((s) => ({
+          ...s,
+          error: "Please switch back to Arc Testnet",
+          chainId: newChainId,
+        }));
+      } else {
+        setState((s) => ({ ...s, error: null, chainId: newChainId }));
+      }
     };
 
     window.ethereum.on("accountsChanged", handleAccountsChanged);

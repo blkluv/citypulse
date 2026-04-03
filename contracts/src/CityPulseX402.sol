@@ -34,10 +34,13 @@ contract CityPulseX402 {
         uint256 vehiclesUsed
     );
 
+    event QueryPriceUpdated(uint256 oldPrice, uint256 newPrice);
+    event ParkingQueryPriceUpdated(uint256 oldPrice, uint256 newPrice);
+
     constructor(uint256 _queryPrice) {
         municipality = msg.sender;
         queryPrice = _queryPrice;
-        parkingQueryPrice = _queryPrice / 10; // default: 1/10 of route price
+        parkingQueryPrice = _queryPrice / 10;
     }
 
     function payForRoute(
@@ -54,7 +57,8 @@ contract CityPulseX402 {
         emit QueryPaid(msg.sender, msg.value, block.timestamp, fromZone, toZone, vehiclesQueried);
 
         if (msg.value > cost) {
-            payable(msg.sender).transfer(msg.value - cost);
+            (bool refundSuccess, ) = payable(msg.sender).call{value: msg.value - cost}("");
+            require(refundSuccess, "Refund failed");
         }
     }
 
@@ -67,23 +71,30 @@ contract CityPulseX402 {
         emit ParkingQueryPaid(msg.sender, msg.value, block.timestamp, zone);
 
         if (msg.value > parkingQueryPrice) {
-            payable(msg.sender).transfer(msg.value - parkingQueryPrice);
+            (bool refundSuccess, ) = payable(msg.sender).call{value: msg.value - parkingQueryPrice}("");
+            require(refundSuccess, "Refund failed");
         }
     }
 
     function withdraw() external {
         require(msg.sender == municipality, "Only municipality");
-        payable(municipality).transfer(address(this).balance);
+        uint256 bal = address(this).balance;
+        (bool success, ) = payable(municipality).call{value: bal}("");
+        require(success, "Withdraw failed");
     }
 
     function setQueryPrice(uint256 _newPrice) external {
         require(msg.sender == municipality, "Only municipality");
+        uint256 oldPrice = queryPrice;
         queryPrice = _newPrice;
+        emit QueryPriceUpdated(oldPrice, _newPrice);
     }
 
     function setParkingQueryPrice(uint256 _newPrice) external {
         require(msg.sender == municipality, "Only municipality");
+        uint256 oldPrice = parkingQueryPrice;
         parkingQueryPrice = _newPrice;
+        emit ParkingQueryPriceUpdated(oldPrice, _newPrice);
     }
 
     function getStats() external view returns (

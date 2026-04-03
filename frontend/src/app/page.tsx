@@ -17,27 +17,8 @@ import { useVehicleStream } from "@/hooks/useVehicleStream";
 import { usePayment } from "@/hooks/usePayment";
 import { useCircleWallet } from "@/hooks/useCircleWallet";
 import { ISTANBUL_ZONES, BACKEND_URL } from "@/lib/constants";
+import { detectZone } from "@/lib/zones";
 import type { HeatmapPoint, RouteResult as RouteResultType } from "@/types";
-
-/** Assign zone name from coordinates using simple boundary detection. */
-function getZoneFromCoords(lat: number, lng: number): string {
-  if (lng > 29.00) {
-    if (lat > 41.02) return "Uskudar";
-    return "Kadikoy";
-  }
-  if (lat > 41.07) return "Levent";
-  if (lat > 41.05) return "Sisli";
-  if (lat > 41.04) return "Besiktas";
-  if (lat > 41.03) {
-    if (lng < 28.98) return "Beyoglu";
-    return "Taksim";
-  }
-  if (lat > 41.01) return "Eminonu";
-  if (lat > 41.00) return "Fatih";
-  if (lng < 28.92) return "Bakirkoy";
-  if (lng < 28.93) return "Zeytinburnu";
-  return "Fatih";
-}
 
 /** Generate sample heatmap from vehicle positions. */
 function vehiclesToHeatmap(
@@ -180,8 +161,8 @@ export default function Home() {
 
     setPayingInProgress(true);
     try {
-      const fromZone = getZoneFromCoords(startPoint[0], startPoint[1]);
-      const toZone = getZoneFromCoords(endPoint[0], endPoint[1]);
+      const fromZone = detectZone(startPoint[0], startPoint[1]);
+      const toZone = detectZone(endPoint[0], endPoint[1]);
       const vehicleCount = Math.max(1, Math.min(vehicles.length, 10));
       await payForRoute(
         fromZone,
@@ -226,10 +207,10 @@ export default function Home() {
     vehicles.length > 0 ? Date.now() : 0;
 
   const fromZone = startPoint
-    ? getZoneFromCoords(startPoint[0], startPoint[1])
+    ? detectZone(startPoint[0], startPoint[1])
     : "";
   const toZone = endPoint
-    ? getZoneFromCoords(endPoint[0], endPoint[1])
+    ? detectZone(endPoint[0], endPoint[1])
     : "";
 
   return (

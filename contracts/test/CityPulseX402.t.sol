@@ -29,6 +29,9 @@ contract CityPulseX402Test is Test {
         string zone
     );
 
+    event QueryPriceUpdated(uint256 oldPrice, uint256 newPrice);
+    event ParkingQueryPriceUpdated(uint256 oldPrice, uint256 newPrice);
+
     function setUp() public {
         municipality = address(this);
         driver = makeAddr("driver");
@@ -325,6 +328,21 @@ contract CityPulseX402Test is Test {
         // getStats returns totalQueries + totalParkingQueries
         assertEq(queries, 2); // 1 route + 1 parking
         assertEq(revenue, routeCost + parkingPrice);
+    }
+
+    function test_setQueryPrice_emitsEvent() public {
+        uint256 newPrice = 5000;
+        vm.expectEmit(false, false, false, true);
+        emit QueryPriceUpdated(QUERY_PRICE, newPrice);
+        cityPulse.setQueryPrice(newPrice);
+    }
+
+    function test_setParkingQueryPrice_emitsEvent() public {
+        uint256 oldPrice = cityPulse.parkingQueryPrice();
+        uint256 newPrice = 500;
+        vm.expectEmit(false, false, false, true);
+        emit ParkingQueryPriceUpdated(oldPrice, newPrice);
+        cityPulse.setParkingQueryPrice(newPrice);
     }
 
     function test_getParkingStats_returnsCorrectValues() public {

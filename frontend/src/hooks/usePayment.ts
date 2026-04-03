@@ -65,7 +65,7 @@ export function usePayment() {
 
         if (!response.ok) {
           throw new Error(
-            `Route request failed: ${response.status} ${response.statusText}`
+            `Payment sent (tx: ${txHash.slice(0, 10)}...) but route fetch failed. Your payment is on-chain — refresh and try again.`
           );
         }
 

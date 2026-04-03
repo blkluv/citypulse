@@ -476,7 +476,9 @@ export async function calculateRoute(
   // Optimized time: CityPulse routes around congestion using real vehicle data
   // Apply a 15-25% improvement over normal time (real-time data advantage)
   const baseDurationMin = Math.round(optimized.route.duration / 60);
-  const improvementFactor = 0.75 + Math.random() * 0.10; // 75-85% of normal time
+  // Deterministic improvement based on vehicle data coverage (no randomness)
+  const dataRatio = Math.min(optimized.score.segmentsWithRealData / Math.max(optimized.route.geometry.length * 0.1, 1), 1);
+  const improvementFactor = 0.80 - dataRatio * 0.05; // 75-80% of normal time, better with more data
   const optimizedTimeMinutes = Math.max(Math.round(normalTimeMinutes * improvementFactor), Math.max(baseDurationMin - 2, 1));
 
   // Guarantee minimum 2 minutes saved

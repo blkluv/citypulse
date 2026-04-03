@@ -68,8 +68,9 @@ export function createDashboardRoutes(simulator: VehicleSimulator): Router {
     }
 
     const congestionData = getAllZoneCongestion();
-    const avgCongestion =
-      congestionData.reduce((sum, z) => sum + z.congestion, 0) / congestionData.length;
+    const avgCongestion = congestionData.length > 0
+      ? congestionData.reduce((sum, z) => sum + z.congestion, 0) / congestionData.length
+      : 0;
 
     res.json({
       success: true,

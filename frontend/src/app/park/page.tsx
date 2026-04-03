@@ -5,25 +5,7 @@ import { DynamicParkMap } from "@/components/Park/DynamicParkMap";
 import { useParkingPayment } from "@/hooks/useParkingPayment";
 import type { ParkingLot } from "@/hooks/useParkingPayment";
 import { ARCSCAN_URL } from "@/lib/constants";
-
-/** Simple zone detection from coordinates. */
-function getZoneFromCoords(lat: number, lng: number): string {
-  if (lng > 29.0) {
-    if (lat > 41.02) return "Uskudar";
-    return "Kadikoy";
-  }
-  if (lat > 41.07) return "Levent";
-  if (lat > 41.05) return "Sisli";
-  if (lat > 41.04) return "Besiktas";
-  if (lat > 41.03) {
-    if (lng < 28.98) return "Beyoglu";
-    return "Taksim";
-  }
-  if (lat > 41.01) return "Eminonu";
-  if (lat > 41.0) return "Fatih";
-  if (lng < 28.92) return "Bakirkoy";
-  return "Fatih";
-}
+import { detectZone } from "@/lib/zones";
 
 export default function ParkPage() {
   const {
@@ -86,7 +68,7 @@ export default function ParkPage() {
 
   const lotList = unlocked ? unlockedLots : [];
   const zoneName = searchCenter
-    ? getZoneFromCoords(searchCenter.lat, searchCenter.lng)
+    ? detectZone(searchCenter.lat, searchCenter.lng)
     : "";
 
   return (

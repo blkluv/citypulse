@@ -8,25 +8,7 @@ import { useVehicleStream } from "@/hooks/useVehicleStream";
 import { usePayment } from "@/hooks/usePayment";
 import type { RouteResult } from "@/types";
 import { BACKEND_URL } from "@/lib/constants";
-
-/** Simple zone detection from coordinates. */
-function getZoneFromCoords(lat: number, lng: number): string {
-  if (lng > 29.0) {
-    if (lat > 41.02) return "Uskudar";
-    return "Kadikoy";
-  }
-  if (lat > 41.07) return "Levent";
-  if (lat > 41.05) return "Sisli";
-  if (lat > 41.04) return "Besiktas";
-  if (lat > 41.03) {
-    if (lng < 28.98) return "Beyoglu";
-    return "Taksim";
-  }
-  if (lat > 41.01) return "Eminonu";
-  if (lat > 41.0) return "Fatih";
-  if (lng < 28.92) return "Bakirkoy";
-  return "Fatih";
-}
+import { detectZone } from "@/lib/zones";
 
 /** Haversine distance in km */
 function haversineKm(
@@ -148,7 +130,7 @@ export default function DrivePage() {
         return;
       }
 
-      const name = getZoneFromCoords(lat, lng);
+      const name = detectZone(lat, lng);
       if (!startPoint) {
         handleSetStart({ lat, lng }, name);
       } else if (!endPoint) {
@@ -186,8 +168,8 @@ export default function DrivePage() {
 
     setPayInProgress(true);
     try {
-      const fromZone = getZoneFromCoords(startPoint.lat, startPoint.lng);
-      const toZone = getZoneFromCoords(endPoint.lat, endPoint.lng);
+      const fromZone = detectZone(startPoint.lat, startPoint.lng);
+      const toZone = detectZone(endPoint.lat, endPoint.lng);
 
       const result = await payForRoute(
         fromZone,
