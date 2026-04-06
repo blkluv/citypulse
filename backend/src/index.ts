@@ -15,6 +15,7 @@ import { createIBBRoutes } from "./routes/ibbRoutes.js";
 import { createParkingRoutes } from "./routes/parkingRoutes.js";
 import { createNanopaymentRoutes } from "./routes/nanopaymentRoutes.js";
 import { createCircleRoutes } from "./routes/circleRoutes.js";
+import { createGatewayRoutes } from "./routes/gatewayRoutes.js";
 
 // --- Initialize ---
 const app = express();
@@ -37,6 +38,7 @@ app.use("/api/ibb", createIBBRoutes());
 app.use("/api/parking", createParkingRoutes());
 app.use("/api/nanopayments", createNanopaymentRoutes());
 app.use("/api/circle", createCircleRoutes());
+app.use("/api/gateway", createGatewayRoutes());
 
 // Health check
 app.get("/api/health", (_req, res) => {
