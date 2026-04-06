@@ -1,34 +1,66 @@
 /**
  * Circle Gateway Service — handles USDC deposit/withdraw/balance for Nanopayments.
- *
- * Uses GatewayClient from @circle-fin/x402-batching/client with the demo private key.
- * Users deposit USDC into Gateway once, then all subsequent API payments are gas-free.
+ * Uses dynamic import for ESM-only @circle-fin/x402-batching/client.
  */
 
-import { GatewayClient } from "@circle-fin/x402-batching/client";
 import { config } from "../config.js";
 
+// Dynamic import type for GatewayClient
+type GatewayClientType = {
+  address: string;
+  getBalances: () => Promise<{
+    wallet: { formatted: string };
+    gateway: { formattedAvailable: string; available: bigint };
+  }>;
+  deposit: (amount: string) => Promise<{
+    depositTxHash: string;
+    approvalTxHash?: string;
+    formattedAmount: string;
+  }>;
+  withdraw: (amount: string) => Promise<{
+    mintTxHash: string;
+    formattedAmount: string;
+  }>;
+  pay: (url: string, init?: RequestInit) => Promise<{
+    status: number;
+    data: Record<string, unknown>;
+  }>;
+};
+
 class GatewayService {
-  private client: GatewayClient | null = null;
+  private client: GatewayClientType | null = null;
   private initialized = false;
+  private initPromise: Promise<void> | null = null;
 
   constructor() {
     if (!config.privateKey) {
-      console.log("[Gateway] No private key configured — Gateway disabled");
+      console.log("[Gateway] No private key — Gateway disabled");
       return;
     }
+    // Start async init
+    this.initPromise = this.init();
+  }
 
+  private async init() {
     try {
+      // Dynamic import for ESM-only package
+      const { GatewayClient } = await import("@circle-fin/x402-batching/client");
       const pk = config.privateKey.startsWith("0x") ? config.privateKey : `0x${config.privateKey}`;
+
       this.client = new GatewayClient({
         chain: "arcTestnet",
         privateKey: pk as `0x${string}`,
-      });
+      }) as unknown as GatewayClientType;
+
       this.initialized = true;
       console.log(`[Gateway] Initialized on Arc Testnet — address: ${this.client.address}`);
     } catch (err) {
       console.error("[Gateway] Init failed:", err instanceof Error ? err.message : err);
     }
+  }
+
+  private async ensureInit() {
+    if (this.initPromise) await this.initPromise;
   }
 
   isConfigured(): boolean {
@@ -39,10 +71,8 @@ class GatewayService {
     return this.client?.address || null;
   }
 
-  /**
-   * Get wallet + gateway balances.
-   */
   async getBalances() {
+    await this.ensureInit();
     if (!this.client) return { wallet: "0", gateway: "0" };
 
     try {
@@ -57,65 +87,37 @@ class GatewayService {
     }
   }
 
-  /**
-   * Deposit USDC into Gateway for gas-free payments.
-   */
   async deposit(amount: string) {
+    await this.ensureInit();
     if (!this.client) throw new Error("Gateway not initialized");
 
-    try {
-      const result = await this.client.deposit(amount);
-      console.log(`[Gateway] Deposited ${result.formattedAmount} USDC — tx: ${result.depositTxHash}`);
-      return {
-        depositTxHash: result.depositTxHash,
-        approvalTxHash: result.approvalTxHash,
-        amount: result.formattedAmount,
-      };
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      console.error("[Gateway] Deposit failed:", message);
-      throw new Error(`Deposit failed: ${message}`);
-    }
+    const result = await this.client.deposit(amount);
+    console.log(`[Gateway] Deposited ${result.formattedAmount} USDC — tx: ${result.depositTxHash}`);
+    return {
+      depositTxHash: result.depositTxHash,
+      approvalTxHash: result.approvalTxHash,
+      amount: result.formattedAmount,
+    };
   }
 
-  /**
-   * Withdraw USDC from Gateway back to wallet.
-   */
   async withdraw(amount: string) {
+    await this.ensureInit();
     if (!this.client) throw new Error("Gateway not initialized");
 
-    try {
-      const result = await this.client.withdraw(amount);
-      console.log(`[Gateway] Withdrew ${result.formattedAmount} USDC`);
-      return {
-        mintTxHash: result.mintTxHash,
-        amount: result.formattedAmount,
-      };
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      console.error("[Gateway] Withdraw failed:", message);
-      throw new Error(`Withdraw failed: ${message}`);
-    }
+    const result = await this.client.withdraw(amount);
+    console.log(`[Gateway] Withdrew ${result.formattedAmount} USDC`);
+    return {
+      mintTxHash: result.mintTxHash,
+      amount: result.formattedAmount,
+    };
   }
 
-  /**
-   * Make a paid request to an x402-protected URL.
-   * Signs EIP-3009 authorization (gas-free) and handles 402 flow.
-   */
-  async pay(url: string) {
+  async pay(url: string, init?: RequestInit) {
+    await this.ensureInit();
     if (!this.client) throw new Error("Gateway not initialized");
 
-    try {
-      const result = await this.client.pay(url);
-      return {
-        status: result.status,
-        data: result.data,
-      };
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      console.error("[Gateway] Pay failed:", message);
-      throw new Error(`Payment failed: ${message}`);
-    }
+    const result = await this.client.pay(url, init);
+    return { status: result.status, data: result.data };
   }
 
   getStatus() {
@@ -124,12 +126,6 @@ class GatewayService {
       address: this.client?.address || null,
       chain: "arcTestnet",
       provider: "Circle Gateway + Nanopayments",
-      features: [
-        "Gas-free USDC payments via EIP-3009",
-        "Batched on-chain settlement",
-        "Sub-cent transactions ($0.000001 minimum)",
-        "Cross-chain withdrawal support",
-      ],
     };
   }
 }
