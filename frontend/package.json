@@ -13,13 +13,16 @@
     "@circle-fin/bridge-kit": "^1.8.0",
     "@circle-fin/provider-cctp-v2": "^1.6.0",
     "@circle-fin/w3s-pw-web-sdk": "^1.1.11",
+    "@circle-fin/x402-batching": "^2.1.0",
+    "@x402/fetch": "^2.9.0",
     "ethers": "^6.16.0",
     "leaflet": "^1.9.4",
     "next": "16.2.1",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "react-leaflet": "^5.0.0",
-    "socket.io-client": "^4.8.3"
+    "socket.io-client": "^4.8.3",
+    "viem": "^2.47.10"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

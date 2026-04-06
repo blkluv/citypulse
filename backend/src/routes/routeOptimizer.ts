@@ -1,6 +1,6 @@
 import { Router, Request, Response } from "express";
-import { x402Middleware } from "../x402/middleware.js";
 import { nanopayRouteMiddleware } from "../x402/gatewayMiddleware.js";
+import type { PaymentRequest } from "../x402/gatewayMiddleware.js";
 import { VehicleSimulator } from "../simulator/vehicleSimulator.js";
 import { calculateRoute } from "../services/routingService.js";
 import { osrmService } from "../services/osrmService.js";
@@ -10,8 +10,7 @@ export function createRouteOptimizerRoutes(simulator: VehicleSimulator): Router 
 
   /**
    * POST /api/route/baseline
-   * PUBLIC — Free OSRM baseline route (no vehicle data, no x402 payment)
-   * This is what Google Maps / any routing engine would give you.
+   * PUBLIC — Free OSRM baseline route (no vehicle data, no payment)
    * Body: { from: { lat, lng }, to: { lat, lng } }
    */
   router.post("/baseline", async (req: Request, res: Response) => {
@@ -54,9 +53,9 @@ export function createRouteOptimizerRoutes(simulator: VehicleSimulator): Router 
         timestamp: Date.now(),
         route: route.geometry,
         distance: Math.round(route.distance),
-        duration: Math.round(route.duration / 60), // minutes
+        duration: Math.round(route.duration / 60),
         source: "osrm-baseline",
-        note: "This is a free baseline route without real-time traffic data. Pay with x402 to get the CityPulse optimized route.",
+        note: "Free baseline route without real-time traffic data. Pay with Circle Nanopayments to get the CityPulse optimized route.",
       });
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
@@ -69,11 +68,11 @@ export function createRouteOptimizerRoutes(simulator: VehicleSimulator): Router 
 
   /**
    * POST /api/route
-   * x402 PROTECTED — CityPulse optimized route using OSRM + live vehicle data
-   * Requires on-chain payment verification via X-PAYMENT-TX header.
+   * Circle Nanopayments protected — CityPulse optimized route
+   * Payment: $0.0005 USDC via Gateway batched settlement (gas-free)
    * Body: { from: { lat, lng }, to: { lat, lng } }
    */
-  router.post("/", x402Middleware, async (req: Request, res: Response) => {
+  router.post("/", nanopayRouteMiddleware as any, async (req: Request, res: Response) => {
     const { from, to } = req.body;
 
     if (!from || !to || typeof from.lat !== "number" || typeof from.lng !== "number" ||
@@ -91,7 +90,7 @@ export function createRouteOptimizerRoutes(simulator: VehicleSimulator): Router 
     if (!isInBounds(from.lat, from.lng) || !isInBounds(to.lat, to.lng)) {
       res.status(400).json({
         success: false,
-        error: "Coordinates must be within Istanbul bounds (lat: 40.80-41.30, lng: 28.50-29.40)",
+        error: "Coordinates must be within Istanbul bounds",
       });
       return;
     }
@@ -102,7 +101,8 @@ export function createRouteOptimizerRoutes(simulator: VehicleSimulator): Router 
       res.json({
         success: true,
         timestamp: Date.now(),
-        payment: req.paymentInfo,
+        paymentMethod: "circle-nanopayments",
+        payment: (req as PaymentRequest).payment,
         optimizedRoute: result.optimizedRoute,
         normalRoute: result.normalRoute,
         normalTime: result.normalTime,
@@ -119,42 +119,6 @@ export function createRouteOptimizerRoutes(simulator: VehicleSimulator): Router 
         success: false,
         error: `Route calculation failed: ${message}`,
       });
-    }
-  });
-
-  /**
-   * POST /api/route/nanopay
-   * Circle Nanopayments protected — CityPulse optimized route via Gateway batched settlement
-   */
-  router.post("/nanopay", nanopayRouteMiddleware as any, async (req: Request, res: Response) => {
-    const { from, to } = req.body || {};
-
-    if (!from || !to || typeof from.lat !== "number" || typeof from.lng !== "number" ||
-        typeof to.lat !== "number" || typeof to.lng !== "number") {
-      res.status(400).json({ success: false, error: "Invalid request body. Expected: { from: { lat, lng }, to: { lat, lng } }" });
-      return;
-    }
-
-    const isInBounds = (lat: number, lng: number) =>
-      lat >= 40.80 && lat <= 41.30 && lng >= 28.50 && lng <= 29.40;
-
-    if (!isInBounds(from.lat, from.lng) || !isInBounds(to.lat, to.lng)) {
-      res.status(400).json({ success: false, error: "Coordinates must be within Istanbul bounds" });
-      return;
-    }
-
-    try {
-      const result = await calculateRoute(from, to, simulator);
-      res.json({
-        success: true,
-        timestamp: Date.now(),
-        paymentMethod: "circle-nanopayments",
-        payment: (req as any).payment,
-        ...result,
-      });
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err);
-      res.status(500).json({ success: false, error: `Route calculation failed: ${message}` });
     }
   });
 

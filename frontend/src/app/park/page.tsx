@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect } from "react";
 import { DynamicParkMap } from "@/components/Park/DynamicParkMap";
 import { useParkingPayment } from "@/hooks/useParkingPayment";
 import type { ParkingLot } from "@/hooks/useParkingPayment";
+import { useNanopayment } from "@/hooks/useNanopayment";
 import { ARCSCAN_URL } from "@/lib/constants";
 import { detectZone } from "@/lib/zones";
 
@@ -23,6 +24,11 @@ export default function ParkPage() {
     reset,
     wallet,
   } = useParkingPayment();
+
+  const nanopay = useNanopayment();
+
+  // Use nanopay wallet if available, fallback to MetaMask
+  const activeWallet = nanopay.address ? nanopay : wallet;
 
   const [selectedLot, setSelectedLot] = useState<ParkingLot | null>(null);
   const [searchRadius] = useState(1000);
@@ -118,23 +124,23 @@ export default function ParkPage() {
             </div>
           )}
           <div className="bg-[#0a0f1e]/90 backdrop-blur-xl rounded-xl px-3 py-1.5 border border-[#2a3040]">
-            {wallet.address ? (
+            {nanopay.address ? (
               <span className="text-xs text-[#00ff88] font-mono">
-                {wallet.address.slice(0, 6)}...{wallet.address.slice(-4)}
+                {nanopay.address.slice(0, 6)}...{nanopay.address.slice(-4)}
               </span>
             ) : (
               <button
-                onClick={wallet.connect}
-                disabled={wallet.isConnecting}
+                onClick={nanopay.connect}
+                disabled={nanopay.isConnecting}
                 className="text-xs text-[#00f0ff] hover:text-[#00d4e0] cursor-pointer disabled:opacity-50"
               >
-                {wallet.isConnecting ? "Connecting..." : "Connect Wallet"}
+                {nanopay.isConnecting ? "Connecting..." : "Connect Wallet"}
               </button>
             )}
           </div>
-          {wallet.error && (
+          {nanopay.error && (
             <div className="absolute top-full right-0 mt-2 bg-[#ff4060]/20 backdrop-blur-xl rounded-lg px-3 py-2 border border-[#ff4060]/40 max-w-xs">
-              <span className="text-[10px] text-[#ff4060]">{wallet.error}</span>
+              <span className="text-[10px] text-[#ff4060]">{nanopay.error}</span>
             </div>
           )}
         </div>
@@ -190,15 +196,15 @@ export default function ParkPage() {
             </div>
 
             {/* Unlock button */}
-            {!wallet.address ? (
+            {!nanopay.address ? (
               <button
-                onClick={wallet.connect}
-                disabled={wallet.isConnecting}
+                onClick={nanopay.connect}
+                disabled={nanopay.isConnecting}
                 className="w-full py-3 rounded-xl font-semibold text-sm transition-all cursor-pointer
                   bg-[#ffd700] text-[#0a0f1e] hover:bg-[#e6c200] active:scale-[0.98]
                   disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {wallet.isConnecting ? "Connecting..." : "Connect Wallet to Unlock"}
+                {nanopay.isConnecting ? "Connecting..." : "Connect Wallet to Unlock"}
               </button>
             ) : (
               <button
@@ -219,9 +225,9 @@ export default function ParkPage() {
               </button>
             )}
 
-            {wallet.address && (
+            {nanopay.address && (
               <p className="text-[10px] text-[#00ff88] text-center mt-2 font-mono">
-                {wallet.address.slice(0, 6)}...{wallet.address.slice(-4)} &middot; {wallet.balance} USDC
+                {nanopay.address.slice(0, 6)}...{nanopay.address.slice(-4)} &middot; {nanopay.walletBalance} USDC
               </p>
             )}
 

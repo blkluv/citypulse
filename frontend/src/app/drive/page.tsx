@@ -5,7 +5,7 @@ import { DynamicDriveMap } from "@/components/Drive/DynamicDriveMap";
 import { SearchOverlay } from "@/components/Drive/SearchOverlay";
 import { NavigationCard } from "@/components/Drive/NavigationCard";
 import { useVehicleStream } from "@/hooks/useVehicleStream";
-import { usePayment } from "@/hooks/usePayment";
+import { useNanopayment } from "@/hooks/useNanopayment";
 import type { RouteResult } from "@/types";
 import { BACKEND_URL } from "@/lib/constants";
 import { detectZone } from "@/lib/zones";
@@ -35,13 +35,17 @@ type DrivePhase = "search" | "baseline" | "comparison" | "navigating";
 
 export default function DrivePage() {
   const { vehicles } = useVehicleStream();
-  const {
-    loading: paymentLoading,
-    error: paymentError,
-    payForRoute,
-    clearResult,
-    wallet,
-  } = usePayment();
+  const nanopay = useNanopayment();
+
+  // Compat aliases
+  const paymentLoading = false;
+  const paymentError = nanopay.error;
+  const wallet = {
+    address: nanopay.address,
+    balance: nanopay.walletBalance,
+    isConnecting: nanopay.isConnecting,
+    connect: nanopay.connect,
+  };
 
   const [phase, setPhase] = useState<DrivePhase>("search");
   const [startPoint, setStartPoint] = useState<{ lat: number; lng: number } | null>(null);
@@ -157,37 +161,30 @@ export default function DrivePage() {
     setBaseline(null);
     setPaidRoute(null);
     setPhase("search");
-    clearResult();
-  }, [clearResult]);
+  }, []);
 
-  // PAY → then get CityPulse optimized route (x402 flow)
+  // PAY → Circle Nanopayments x402 flow (gas-free EIP-3009)
   const [payInProgress, setPayInProgress] = useState(false);
 
   const handlePay = useCallback(async () => {
-    if (!startPoint || !endPoint || !estimate || payInProgress) return;
+    if (!startPoint || !endPoint || payInProgress) return;
 
     setPayInProgress(true);
     try {
-      const fromZone = detectZone(startPoint.lat, startPoint.lng);
-      const toZone = detectZone(endPoint.lat, endPoint.lng);
-
-      const result = await payForRoute(
-        fromZone,
-        toZone,
-        estimate.vehicleCount,
-        startPoint,
-        endPoint
-      );
+      // Circle Nanopayments: fetch with automatic 402 → sign → retry
+      const result = await nanopay.fetchPaidRoute(startPoint, endPoint);
 
       if (result) {
         setPaidRoute(result);
-        setPaidCost(result.cost || estimate.cost);
+        setPaidCost(result.cost || "0.0005");
         setPhase("comparison");
       }
+    } catch (err) {
+      console.error("Payment failed:", err);
     } finally {
       setPayInProgress(false);
     }
-  }, [startPoint, endPoint, estimate, payForRoute, payInProgress]);
+  }, [startPoint, endPoint, nanopay, payInProgress]);
 
   const handleEndNavigation = useCallback(() => {
     handleClear();
