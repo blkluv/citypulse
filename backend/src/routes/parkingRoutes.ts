@@ -1,5 +1,6 @@
 import { Router, Request, Response } from "express";
 import { x402ParkingMiddleware } from "../x402/middleware.js";
+import { nanopayParkingMiddleware } from "../x402/gatewayMiddleware.js";
 import { ibbClient } from "../data/ibbClient.js";
 import { x402Verifier } from "../x402/verifier.js";
 
@@ -194,6 +195,53 @@ export function createParkingRoutes(): Router {
         success: false,
         error: `Failed to fetch parking stats: ${message}`,
       });
+    }
+  });
+
+  /**
+   * GET /api/parking/nanopay/availability?lat=&lng=&radius=
+   * Circle Nanopayments protected — live parking availability via Gateway batched settlement
+   */
+  router.get("/nanopay/availability", nanopayParkingMiddleware as any, async (req: Request, res: Response) => {
+    const lat = parseFloat(req.query.lat as string);
+    const lng = parseFloat(req.query.lng as string);
+    const radius = parseInt(req.query.radius as string, 10) || 1000;
+
+    if (isNaN(lat) || isNaN(lng)) {
+      res.status(400).json({ success: false, error: "Required: lat, lng" });
+      return;
+    }
+
+    try {
+      const allParking = await ibbClient.getParkingData();
+      const nearby = allParking
+        .filter((p) => haversineM(lat, lng, p.lat, p.lng) <= radius)
+        .map((p) => ({
+          id: p.id, name: p.name, lat: p.lat, lng: p.lng,
+          capacity: p.capacity, emptyCapacity: p.emptyCapacity,
+          occupied: p.capacity - p.emptyCapacity, available: p.emptyCapacity,
+          occupancyRate: Math.round(p.occupancyRate * 100),
+          status: !p.isOpen ? "closed" as const : p.emptyCapacity === 0 ? "full" as const : "open" as const,
+          color: getOccupancyColor(p.occupancyRate),
+          district: p.district, parkType: p.parkType,
+          distance: Math.round(haversineM(lat, lng, p.lat, p.lng)),
+        }))
+        .sort((a, b) => a.occupancyRate - b.occupancyRate);
+
+      res.json({
+        success: true,
+        timestamp: Date.now(),
+        paymentMethod: "circle-nanopayments",
+        payment: (req as any).payment,
+        count: nearby.length,
+        locked: false,
+        validFor: 15 * 60 * 1000,
+        validUntil: Date.now() + 15 * 60 * 1000,
+        parkingLots: nearby,
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      res.status(500).json({ success: false, error: message });
     }
   });
 

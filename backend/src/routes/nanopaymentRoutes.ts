@@ -42,27 +42,35 @@ export function createNanopaymentRoutes(): Router {
         pricingModel: {
           "route-optimization": {
             price: "$0.0005 USDC",
-            endpoint: "POST /api/route",
+            endpoints: {
+              legacy: "POST /api/route (X-PAYMENT-TX header)",
+              nanopayments: "POST /api/route/nanopay (Circle Gateway x402)",
+            },
             description: "AI-optimized route using 40 municipal vehicles",
-            x402Header: "X-PAYMENT-TX",
           },
           "parking-availability": {
             price: "$0.0001 USDC",
-            endpoint: "GET /api/parking/availability",
+            endpoints: {
+              legacy: "GET /api/parking/availability (X-PAYMENT-TX header)",
+              nanopayments: "GET /api/parking/nanopay/availability (Circle Gateway x402)",
+            },
             description: "Real-time ISPARK parking occupancy (262+ facilities)",
-            x402Header: "X-PAYMENT-TX",
           },
           "vehicle-positions": {
             price: "$0.001 USDC",
-            endpoint: "GET /api/traffic/vehicles",
+            endpoints: {
+              legacy: "GET /api/traffic/vehicles (X-PAYMENT-TX header)",
+              nanopayments: "GET /api/traffic/nanopay/vehicles (Circle Gateway x402)",
+            },
             description: "Real-time positions of 40 municipal vehicles",
-            x402Header: "X-PAYMENT-TX",
           },
           "zone-traffic": {
             price: "$0.0005 USDC",
-            endpoint: "GET /api/traffic/zone/:zone",
+            endpoints: {
+              legacy: "GET /api/traffic/zone/:zone (X-PAYMENT-TX header)",
+              nanopayments: "GET /api/traffic/nanopay/zone/:zone (Circle Gateway x402)",
+            },
             description: "Zone-specific congestion data",
-            x402Header: "X-PAYMENT-TX",
           },
         },
         contract: {

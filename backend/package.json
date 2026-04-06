@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@circle-fin/developer-controlled-wallets": "^10.2.0",
+    "@circle-fin/x402-batching": "^2.1.0",
     "@x402/core": "^2.9.0",
     "@x402/evm": "^2.9.0",
     "cors": "^2.8.5",
@@ -17,6 +18,7 @@
     "ethers": "^6.13.4",
     "express": "^4.21.1",
     "socket.io": "^4.8.1",
+    "viem": "^2.47.10",
     "x402-express": "^1.1.0"
   },
   "devDependencies": {

@@ -1,5 +1,6 @@
 import { Router, Request, Response } from "express";
 import { x402Middleware } from "../x402/middleware.js";
+import { nanopayRouteMiddleware } from "../x402/gatewayMiddleware.js";
 import { VehicleSimulator } from "../simulator/vehicleSimulator.js";
 import { calculateRoute } from "../services/routingService.js";
 import { osrmService } from "../services/osrmService.js";
@@ -118,6 +119,42 @@ export function createRouteOptimizerRoutes(simulator: VehicleSimulator): Router 
         success: false,
         error: `Route calculation failed: ${message}`,
       });
+    }
+  });
+
+  /**
+   * POST /api/route/nanopay
+   * Circle Nanopayments protected — CityPulse optimized route via Gateway batched settlement
+   */
+  router.post("/nanopay", nanopayRouteMiddleware as any, async (req: Request, res: Response) => {
+    const { from, to } = req.body || {};
+
+    if (!from || !to || typeof from.lat !== "number" || typeof from.lng !== "number" ||
+        typeof to.lat !== "number" || typeof to.lng !== "number") {
+      res.status(400).json({ success: false, error: "Invalid request body. Expected: { from: { lat, lng }, to: { lat, lng } }" });
+      return;
+    }
+
+    const isInBounds = (lat: number, lng: number) =>
+      lat >= 40.80 && lat <= 41.30 && lng >= 28.50 && lng <= 29.40;
+
+    if (!isInBounds(from.lat, from.lng) || !isInBounds(to.lat, to.lng)) {
+      res.status(400).json({ success: false, error: "Coordinates must be within Istanbul bounds" });
+      return;
+    }
+
+    try {
+      const result = await calculateRoute(from, to, simulator);
+      res.json({
+        success: true,
+        timestamp: Date.now(),
+        paymentMethod: "circle-nanopayments",
+        payment: (req as any).payment,
+        ...result,
+      });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      res.status(500).json({ success: false, error: `Route calculation failed: ${message}` });
     }
   });
 
