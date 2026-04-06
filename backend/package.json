@@ -1,6 +1,7 @@
 {
   "name": "citypulse-backend",
   "version": "1.0.0",
+  "type": "module",
   "description": "CityPulse Istanbul municipal vehicle tracking backend",
   "main": "dist/index.js",
   "scripts": {
