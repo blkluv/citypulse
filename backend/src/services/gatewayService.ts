@@ -19,9 +19,10 @@ class GatewayService {
     }
 
     try {
+      const pk = config.privateKey.startsWith("0x") ? config.privateKey : `0x${config.privateKey}`;
       this.client = new GatewayClient({
         chain: "arcTestnet",
-        privateKey: config.privateKey as `0x${string}`,
+        privateKey: pk as `0x${string}`,
       });
       this.initialized = true;
       console.log(`[Gateway] Initialized on Arc Testnet — address: ${this.client.address}`);
