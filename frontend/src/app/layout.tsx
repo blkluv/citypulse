@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "CityPulse - Municipal Traffic x402",
+  title: "CityPulse - Municipal Traffic Nanopayments",
   description:
-    "Real-time municipal traffic intelligence with x402 nanopayments. Get optimized routes powered by Istanbul's municipal vehicle fleet.",
+    "Real-time municipal traffic intelligence with Circle Nanopayments on Arc. Sub-cent, gas-free payments for route optimization and parking data.",
 };
 
 export default function RootLayout({
