@@ -92,7 +92,7 @@ export default function DrivePage() {
 
   return (
     <div className="h-screen w-screen overflow-hidden bg-[#0A0F1C] relative">
-      <DynamicDriveMap vehicles={vehicles} routeResult={displayRoute} startPoint={startPoint} endPoint={endPoint} onMapClick={handleMapClick} mapClickEnabled={mapClickMode} />
+      <DynamicDriveMap vehicles={vehicles} routeResult={displayRoute} startPoint={startPoint} endPoint={endPoint} onMapClick={handleMapClick} mapClickEnabled={mapClickMode} isNavigating={phase === "navigating"} />
 
       {/* ─── TOP BAR (Pencil: 62px status + 48px header) ─── */}
       <div className="absolute top-0 left-0 right-0 z-[1000]">
