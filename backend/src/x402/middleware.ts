@@ -38,7 +38,7 @@ declare global {
 const ENDPOINT_PRICES: Record<string, { amount: string; description: string }> = {
   "/api/traffic/vehicles": {
     amount: "0.001",
-    description: "Real-time vehicle positions for all 40 municipal vehicles",
+    description: "Real-time vehicle positions for all 80 municipal vehicles",
   },
   "/api/traffic/zone": {
     amount: "0.0005",
@@ -46,7 +46,7 @@ const ENDPOINT_PRICES: Record<string, { amount: string; description: string }> =
   },
   "/api/route": {
     amount: "0.005",
-    description: "AI-optimized route with live traffic data from 40 vehicles",
+    description: "AI-optimized route with live traffic data from 80 vehicles",
   },
   "/api/parking/availability": {
     amount: "0.0001",

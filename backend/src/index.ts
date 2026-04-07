@@ -61,7 +61,7 @@ app.get("/", (_req, res) => {
     name: "CityPulse Istanbul",
     description: "Real-time municipal vehicle tracking with x402-protected traffic data",
     version: "2.0.0",
-    vehicles: 40,
+    vehicles: 80,
     contract: config.contractAddress,
     network: "arc-testnet",
     chainId: config.chainId,
@@ -129,7 +129,7 @@ httpServer.listen(config.port, async () => {
   ║═══════════════════════════════════════════════════║
   ║  HTTP:  http://localhost:${config.port}                   ║
   ║  WS:    ws://localhost:${config.port}                     ║
-  ║  Vehicles: 40 municipal units                     ║
+  ║  Vehicles: 80 municipal units                     ║
   ║  Zones: 10 Istanbul districts                     ║
   ║  Tick: ${TICK_INTERVAL}ms                                    ║
   ║  Contract: ${config.contractAddress.slice(0, 10)}...${config.contractAddress.slice(-6)}       ║

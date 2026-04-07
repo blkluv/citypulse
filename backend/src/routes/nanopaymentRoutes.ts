@@ -46,7 +46,7 @@ export function createNanopaymentRoutes(): Router {
               legacy: "POST /api/route (X-PAYMENT-TX header)",
               nanopayments: "POST /api/route/nanopay (Circle Gateway x402)",
             },
-            description: "AI-optimized route using 40 municipal vehicles",
+            description: "AI-optimized route using 80 municipal vehicles",
           },
           "parking-availability": {
             price: "$0.0001 USDC",
@@ -62,7 +62,7 @@ export function createNanopaymentRoutes(): Router {
               legacy: "GET /api/traffic/vehicles (X-PAYMENT-TX header)",
               nanopayments: "GET /api/traffic/nanopay/vehicles (Circle Gateway x402)",
             },
-            description: "Real-time positions of 40 municipal vehicles",
+            description: "Real-time positions of 80 municipal vehicles",
           },
           "zone-traffic": {
             price: "$0.0005 USDC",

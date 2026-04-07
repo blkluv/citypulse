@@ -279,56 +279,132 @@ function createVehicle(
   };
 }
 
-// --- Create all 40 vehicles ---
+// --- Additional routes for expanded fleet ---
+
+// 10. Bus Route Bayrampasa → Esenler (inland west)
+const ROUTE_BAYRAMPASA: [number, number][] = [
+  [41.0480, 28.9200], [41.0460, 28.9240], [41.0440, 28.9280], [41.0420, 28.9320],
+  [41.0400, 28.9360], [41.0380, 28.9400], [41.0360, 28.9350], [41.0340, 28.9300],
+  [41.0320, 28.9260], [41.0340, 28.9220], [41.0360, 28.9200], [41.0380, 28.9180],
+  [41.0400, 28.9160], [41.0420, 28.9180], [41.0440, 28.9190], [41.0460, 28.9200],
+];
+
+// 11. Garbage Route Atasehir (Asian side inland)
+const ROUTE_ATASEHIR: [number, number][] = [
+  [40.9850, 29.1000], [40.9870, 29.1040], [40.9890, 29.1080], [40.9910, 29.1120],
+  [40.9930, 29.1100], [40.9920, 29.1060], [40.9900, 29.1020], [40.9880, 29.0980],
+  [40.9860, 29.0950], [40.9840, 29.0920], [40.9830, 29.0950], [40.9840, 29.0980],
+];
+
+// 12. Service Route Sariyer (north Bosphorus)
+const ROUTE_SARIYER: [number, number][] = [
+  [41.1050, 29.0400], [41.1080, 29.0380], [41.1110, 29.0360], [41.1140, 29.0340],
+  [41.1170, 29.0310], [41.1200, 29.0280], [41.1180, 29.0250], [41.1150, 29.0270],
+  [41.1120, 29.0300], [41.1090, 29.0330], [41.1060, 29.0360], [41.1050, 29.0390],
+];
+
+// 13. Ambulance Route Kadikoy-Uskudar corridor
+const ROUTE_KADIKOY_AMB: [number, number][] = [
+  [40.9900, 29.0300], [40.9950, 29.0280], [41.0000, 29.0260], [41.0050, 29.0240],
+  [41.0100, 29.0220], [41.0150, 29.0200], [41.0200, 29.0180], [41.0250, 29.0200],
+  [41.0200, 29.0230], [41.0150, 29.0250], [41.0100, 29.0270], [41.0050, 29.0290],
+];
+
+// 14. Police Route Levent-Maslak (business district)
+const ROUTE_LEVENT_POL: [number, number][] = [
+  [41.0750, 29.0020], [41.0780, 29.0010], [41.0810, 29.0000], [41.0840, 28.9990],
+  [41.0870, 28.9980], [41.0900, 28.9970], [41.0930, 28.9960], [41.0960, 28.9950],
+  [41.0930, 28.9970], [41.0900, 28.9990], [41.0870, 29.0010], [41.0840, 29.0020],
+];
+
+// 15. Bus Route Maltepe (Asian side south coast)
+const ROUTE_MALTEPE: [number, number][] = [
+  [40.9350, 29.1300], [40.9380, 29.1260], [40.9410, 29.1220], [40.9440, 29.1180],
+  [40.9470, 29.1140], [40.9500, 29.1100], [40.9530, 29.1060], [40.9560, 29.1020],
+  [40.9530, 29.1040], [40.9500, 29.1080], [40.9470, 29.1120], [40.9440, 29.1160],
+  [40.9410, 29.1200], [40.9380, 29.1240], [40.9350, 29.1280],
+];
+
+// --- Create all 80 vehicles ---
 function createAllVehicles(): MunicipalVehicle[] {
   const vehicles: MunicipalVehicle[] = [];
 
-  // 1. Bus Route E5 — 6 buses
-  for (let i = 0; i < 6; i++) {
+  // 1. Bus Route E5 — 8 buses
+  for (let i = 0; i < 8; i++) {
     vehicles.push(createVehicle(`IBB-BUS-E5-${String(i + 1).padStart(2, "0")}`, "bus", ROUTE_E5, i));
   }
 
-  // 2. Bus Route Fatih — 5 buses
-  for (let i = 0; i < 5; i++) {
+  // 2. Bus Route Fatih — 7 buses
+  for (let i = 0; i < 7; i++) {
     vehicles.push(createVehicle(`IBB-BUS-FT-${String(i + 1).padStart(2, "0")}`, "bus", ROUTE_FATIH, i));
   }
 
-  // 3. Bus Route Besiktas — 5 buses
-  for (let i = 0; i < 5; i++) {
+  // 3. Bus Route Besiktas — 7 buses
+  for (let i = 0; i < 7; i++) {
     vehicles.push(createVehicle(`IBB-BUS-BS-${String(i + 1).padStart(2, "0")}`, "bus", ROUTE_BESIKTAS, i));
   }
 
-  // 4. Garbage Route Beyoglu — 4 trucks
-  for (let i = 0; i < 4; i++) {
+  // 4. Garbage Route Beyoglu — 5 trucks
+  for (let i = 0; i < 5; i++) {
     vehicles.push(createVehicle(`IBB-GRB-BY-${String(i + 1).padStart(2, "0")}`, "garbage_truck", ROUTE_BEYOGLU, i));
   }
 
-  // 5. Garbage Route Kadikoy — 4 trucks
-  for (let i = 0; i < 4; i++) {
+  // 5. Garbage Route Kadikoy — 5 trucks
+  for (let i = 0; i < 5; i++) {
     vehicles.push(createVehicle(`IBB-GRB-KD-${String(i + 1).padStart(2, "0")}`, "garbage_truck", ROUTE_KADIKOY, i));
   }
 
-  // 6. Service Vehicle Sisli — 4 vans
-  for (let i = 0; i < 4; i++) {
+  // 6. Service Vehicle Sisli — 5 vans
+  for (let i = 0; i < 5; i++) {
     vehicles.push(createVehicle(`IBB-SRV-SS-${String(i + 1).padStart(2, "0")}`, "service", ROUTE_SISLI, i));
   }
 
-  // 7. Ambulance Taksim — 4 ambulances
-  for (let i = 0; i < 4; i++) {
+  // 7. Ambulance Taksim — 5 ambulances
+  for (let i = 0; i < 5; i++) {
     vehicles.push(createVehicle(`IBB-AMB-TK-${String(i + 1).padStart(2, "0")}`, "ambulance", ROUTE_TAKSIM, i));
   }
 
-  // 8. Police Patrol Eminonu — 4 police
-  for (let i = 0; i < 4; i++) {
+  // 8. Police Patrol Eminonu — 5 police
+  for (let i = 0; i < 5; i++) {
     vehicles.push(createVehicle(`IBB-POL-EM-${String(i + 1).padStart(2, "0")}`, "police", ROUTE_EMINONU, i));
   }
 
-  // 9. Bus Route Uskudar — 4 buses
-  for (let i = 0; i < 4; i++) {
+  // 9. Bus Route Uskudar — 6 buses
+  for (let i = 0; i < 6; i++) {
     vehicles.push(createVehicle(`IBB-BUS-US-${String(i + 1).padStart(2, "0")}`, "bus", ROUTE_USKUDAR, i));
   }
 
-  return vehicles;
+  // 10. Bus Route Bayrampasa — 5 buses
+  for (let i = 0; i < 5; i++) {
+    vehicles.push(createVehicle(`IBB-BUS-BP-${String(i + 1).padStart(2, "0")}`, "bus", ROUTE_BAYRAMPASA, i));
+  }
+
+  // 11. Garbage Route Atasehir — 4 trucks
+  for (let i = 0; i < 4; i++) {
+    vehicles.push(createVehicle(`IBB-GRB-AT-${String(i + 1).padStart(2, "0")}`, "garbage_truck", ROUTE_ATASEHIR, i));
+  }
+
+  // 12. Service Route Sariyer — 4 vans
+  for (let i = 0; i < 4; i++) {
+    vehicles.push(createVehicle(`IBB-SRV-SR-${String(i + 1).padStart(2, "0")}`, "service", ROUTE_SARIYER, i));
+  }
+
+  // 13. Ambulance Kadikoy-Uskudar — 3 ambulances
+  for (let i = 0; i < 3; i++) {
+    vehicles.push(createVehicle(`IBB-AMB-KU-${String(i + 1).padStart(2, "0")}`, "ambulance", ROUTE_KADIKOY_AMB, i));
+  }
+
+  // 14. Police Patrol Levent — 3 police
+  for (let i = 0; i < 3; i++) {
+    vehicles.push(createVehicle(`IBB-POL-LV-${String(i + 1).padStart(2, "0")}`, "police", ROUTE_LEVENT_POL, i));
+  }
+
+  // 15. Bus Route Maltepe — 3 buses
+  for (let i = 0; i < 3; i++) {
+    vehicles.push(createVehicle(`IBB-BUS-ML-${String(i + 1).padStart(2, "0")}`, "bus", ROUTE_MALTEPE, i));
+  }
+
+  return vehicles; // Total: 80 vehicles
 }
 
 // --- Haversine distance in meters ---
