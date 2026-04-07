@@ -22,7 +22,10 @@ const app = express();
 const httpServer = createServer(app);
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: "*",
+  exposedHeaders: ["PAYMENT-REQUIRED", "X-Payment-Protocol", "X-Payment-Network", "X-Payment-Currency", "X-Payment-Amount"],
+}));
 app.use(express.json());
 
 // --- Vehicle Simulator ---
