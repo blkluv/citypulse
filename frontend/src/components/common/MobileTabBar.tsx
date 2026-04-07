@@ -13,8 +13,8 @@ const tabs = [
 
 export function MobileTabBar({ active }: MobileTabBarProps) {
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-[1100] p-3 pb-5 md:hidden">
-      <div className="flex items-center bg-[#1E293B] border border-[#0F172A] rounded-[36px] p-1 h-[62px]">
+    <div className="fixed bottom-0 left-0 right-0 z-[1100] p-3 pb-5">
+      <div className="flex items-center bg-[#1E293B] border border-[#0F172A] rounded-[36px] p-1 h-[62px] max-w-lg mx-auto">
         {tabs.map((tab) => {
           const isActive = tab.id === active;
           return (

@@ -75,17 +75,12 @@ export default function CardPage() {
   return (
     <div className="min-h-screen bg-[#0A0F1C] flex flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between px-5 pt-14 pb-2 md:pt-6">
+      <div className="flex items-center justify-between px-5 pt-14 pb-2 pt-6">
         <h1 className="text-[#f0f4f8] text-xl md:text-2xl font-semibold">Istanbul Card</h1>
-        <div className="hidden md:flex items-center gap-3">
-          <a href="/" className="text-xs text-[#475569] hover:text-[#f0f4f8]">Dashboard</a>
-          <a href="/drive" className="text-xs text-[#475569] hover:text-[#f0f4f8]">Drive</a>
-          <a href="/park" className="text-xs text-[#475569] hover:text-[#f0f4f8]">Park</a>
-        </div>
       </div>
 
       {/* Content */}
-      <div className="flex-1 px-5 pb-24 md:pb-8 md:max-w-lg md:mx-auto md:w-full space-y-6">
+      <div className="flex-1 px-5 pb-24 max-w-lg mx-auto w-full space-y-6">
 
         {/* Card visual */}
         <div className="relative w-full h-[180px] rounded-2xl border border-[#22D3EE30] overflow-hidden"

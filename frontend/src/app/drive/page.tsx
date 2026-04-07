@@ -141,12 +141,6 @@ export default function DrivePage() {
           <a href="/" className="bg-[#0A0F1C]/90 backdrop-blur-xl rounded-lg px-3 py-2 border border-[#0F172A]">
             <span className="font-mono text-sm font-bold"><span className="text-[#22D3EE]">City</span><span className="text-white">Pulse</span></span>
           </a>
-          <div className="hidden md:flex items-center gap-1">
-            <a href="/" className="bg-[#0A0F1C]/90 backdrop-blur-xl rounded-lg px-3 py-2 border border-[#0F172A] text-xs text-[#475569] hover:text-white">Dashboard</a>
-            <span className="bg-[#22D3EE] rounded-lg px-3 py-2 text-xs text-[#0A0F1C] font-semibold">Drive</span>
-            <a href="/park" className="bg-[#0A0F1C]/90 backdrop-blur-xl rounded-lg px-3 py-2 border border-[#0F172A] text-xs text-[#475569] hover:text-white">Park</a>
-            <a href="/card" className="bg-[#0A0F1C]/90 backdrop-blur-xl rounded-lg px-3 py-2 border border-[#0F172A] text-xs text-[#475569] hover:text-white">Card</a>
-          </div>
         </div>
         <div className="bg-[#1E293B]/90 backdrop-blur-xl rounded-lg px-3 py-2 border border-[#0F172A]">
           {wallet.address ? (
@@ -174,7 +168,7 @@ export default function DrivePage() {
 
       {/* BASELINE — Route found, offer CityPulse upgrade */}
       {phase === "baseline" && baseline && estimate && (
-        <div className="absolute bottom-20 md:bottom-4 left-0 right-0 z-[900] px-4 slide-up">
+        <div className="absolute bottom-20 left-0 right-0 z-[900] px-4 slide-up">
           <div className="max-w-lg mx-auto bg-[#1E293B] rounded-xl border border-[#0F172A] p-5 shadow-2xl">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-white font-semibold">{startName} &rarr; {endName}</h3>
@@ -230,7 +224,7 @@ export default function DrivePage() {
 
       {/* COMPARISON — Both routes shown */}
       {phase === "comparison" && paidRoute && (
-        <div className="absolute bottom-20 md:bottom-4 left-0 right-0 z-[900] px-4 slide-up">
+        <div className="absolute bottom-20 left-0 right-0 z-[900] px-4 slide-up">
           <div className="max-w-lg mx-auto bg-[#1E293B] rounded-xl border border-[#0F172A] p-5 shadow-2xl">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-white font-semibold">{startName} &rarr; {endName}</h3>
@@ -292,7 +286,7 @@ export default function DrivePage() {
 
       {/* Map click hint */}
       {mapClickMode && phase === "search" && (!startPoint || !endPoint) && (
-        <div className="absolute bottom-24 md:bottom-6 left-1/2 -translate-x-1/2 z-[900] pointer-events-none">
+        <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-[900] pointer-events-none">
           <div className="bg-[#0A0F1C]/80 backdrop-blur rounded-full px-4 py-2 border border-[#0F172A]">
             <span className="text-xs text-[#94A3B8]">
               {!startPoint ? "Tap to set start point" : "Tap to set destination"}

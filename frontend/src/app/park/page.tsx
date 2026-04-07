@@ -48,12 +48,6 @@ export default function ParkPage() {
       <div className="absolute top-0 left-0 right-0 z-[1000] flex items-center justify-between px-4 py-3 pt-12 md:pt-3 bg-[#0A0F1C]/80 backdrop-blur-xl">
         <div className="flex items-center gap-2">
           <a href="/" className="font-mono text-sm font-bold"><span className="text-[#22D3EE]">City</span><span className="text-white">Pulse</span></a>
-          <div className="hidden md:flex items-center gap-1 ml-3">
-            <a href="/" className="px-3 py-1 rounded-lg text-xs text-[#475569] hover:text-white">Dashboard</a>
-            <a href="/drive" className="px-3 py-1 rounded-lg text-xs text-[#475569] hover:text-white">Drive</a>
-            <span className="px-3 py-1 rounded-lg text-xs font-medium bg-[#22D3EE]/10 text-[#22D3EE] border border-[#22D3EE]/20">Park</span>
-            <a href="/card" className="px-3 py-1 rounded-lg text-xs text-[#475569] hover:text-white">Card</a>
-          </div>
         </div>
         <div className="flex items-center gap-2">
           {unlocked && timeLeft && (
@@ -95,7 +89,7 @@ export default function ParkPage() {
 
       {/* LOCKED — parking found, not paid */}
       {searchCenter && nearbyLots.length > 0 && !unlocked && !loading && (
-        <div className="absolute bottom-20 md:bottom-4 left-0 right-0 z-[900] px-4 slide-up">
+        <div className="absolute bottom-20 left-0 right-0 z-[900] px-4 slide-up">
           <div className="max-w-lg mx-auto bg-[#1E293B] rounded-xl border border-[#0F172A] p-5 shadow-2xl">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-white font-semibold text-[15px]">Parking near {zoneName}</h3>
@@ -135,7 +129,7 @@ export default function ParkPage() {
 
       {/* No lots found */}
       {searchCenter && nearbyLots.length === 0 && !loading && !unlocked && (
-        <div className="absolute bottom-20 md:bottom-4 left-0 right-0 z-[900] px-4">
+        <div className="absolute bottom-20 left-0 right-0 z-[900] px-4">
           <div className="max-w-lg mx-auto bg-[#1E293B] rounded-xl border border-[#0F172A] p-5 text-center">
             <p className="text-[#94A3B8] text-sm mb-2">No parking lots within {searchRadius}m</p>
             <button onClick={reset} className="text-xs text-[#22D3EE] cursor-pointer">Try another area</button>
@@ -145,7 +139,7 @@ export default function ParkPage() {
 
       {/* UNLOCKED — showing availability */}
       {unlocked && unlockedLots.length > 0 && (
-        <div className="absolute bottom-20 md:bottom-4 left-0 right-0 z-[900] px-4 slide-up">
+        <div className="absolute bottom-20 left-0 right-0 z-[900] px-4 slide-up">
           <div className="max-w-lg mx-auto bg-[#1E293B] rounded-xl border border-[#0F172A] p-4 shadow-2xl">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-white font-semibold text-[15px]">Parking near {zoneName}</h3>
