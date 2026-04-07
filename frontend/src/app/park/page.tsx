@@ -7,6 +7,7 @@ import type { ParkingLot } from "@/hooks/useParkingPayment";
 import { useNanopayment } from "@/hooks/useNanopayment";
 import { ARCSCAN_URL } from "@/lib/constants";
 import { detectZone } from "@/lib/zones";
+import { MobileTabBar } from "@/components/common/MobileTabBar";
 
 export default function ParkPage() {
   const {
@@ -391,6 +392,9 @@ export default function ParkPage() {
           </div>
         </div>
       )}
+
+      {/* Mobile tab bar */}
+      <MobileTabBar active="park" />
     </div>
   );
 }

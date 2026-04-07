@@ -13,6 +13,7 @@ import { DataSources } from "@/components/Dashboard/DataSources";
 import { RouteRequest } from "@/components/RoutePanel/RouteRequest";
 import { RouteResult } from "@/components/RoutePanel/RouteResult";
 import { GatewayBalance } from "@/components/common/GatewayBalance";
+import { MobileTabBar } from "@/components/common/MobileTabBar";
 import { useVehicleStream } from "@/hooks/useVehicleStream";
 import { usePayment } from "@/hooks/usePayment";
 import { useCircleWallet } from "@/hooks/useCircleWallet";
@@ -241,9 +242,9 @@ export default function Home() {
       )}
 
       {/* Main content */}
-      <div className="flex flex-1 pt-[52px] pb-8">
+      <div className="flex flex-col md:flex-row flex-1 pt-[52px] pb-20 md:pb-8">
         {/* Map area */}
-        <div className="flex-1 relative">
+        <div className="flex-1 relative min-h-[50vh] md:min-h-0">
           <DynamicCityMap
             vehicles={vehicles}
             routeResult={routeResult || demoRoute}
@@ -329,7 +330,7 @@ export default function Home() {
         </div>
 
         {/* Dashboard Panel */}
-        <div className="w-80 xl:w-96 bg-[#0a0f1e] border-l border-[#2a3040] p-4 overflow-y-auto custom-scrollbar shrink-0">
+        <div className="w-full md:w-80 xl:w-96 bg-[#0a0f1e] md:border-l border-t md:border-t-0 border-[#2a3040] p-4 overflow-y-auto custom-scrollbar md:shrink-0">
           <StatsBar
             totalRevenue={totalRevenue}
             totalQueries={payments.length}
@@ -354,8 +355,13 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Live Ticker */}
-      <LiveTicker payments={payments} />
+      {/* Live Ticker — hide on mobile */}
+      <div className="hidden md:block">
+        <LiveTicker payments={payments} />
+      </div>
+
+      {/* Mobile tab bar */}
+      <MobileTabBar active="dashboard" />
     </div>
   );
 }

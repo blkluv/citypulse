@@ -75,6 +75,13 @@ export function Header({
           <span className="text-sm">&#x1F17F;&#xFE0F;</span>
           Park
         </a>
+        <a
+          href="/card"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-[#ffd700]/10 text-[#ffd700] hover:bg-[#ffd700]/20 transition-colors border border-[#ffd700]/20"
+        >
+          <span className="text-sm">&#x1F4B3;</span>
+          Card
+        </a>
         <DemoModeButton />
         <WalletSelector
           metamaskAddress={address}

@@ -9,6 +9,7 @@ import { useNanopayment } from "@/hooks/useNanopayment";
 import type { RouteResult } from "@/types";
 import { BACKEND_URL } from "@/lib/constants";
 import { detectZone } from "@/lib/zones";
+import { MobileTabBar } from "@/components/common/MobileTabBar";
 
 /** Haversine distance in km */
 function haversineKm(
@@ -478,6 +479,9 @@ export default function DrivePage() {
           </div>
         </div>
       )}
+
+      {/* Mobile tab bar */}
+      <MobileTabBar active="drive" />
     </div>
   );
 }
