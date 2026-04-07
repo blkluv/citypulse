@@ -68,7 +68,11 @@ export function Navigation3DMap({ route, onStepChange }: Navigation3DMapProps) {
 
     mapRef.current = map;
 
+    // Force resize after mount to ensure correct dimensions
+    setTimeout(() => map.resize(), 100);
+
     map.on("load", () => {
+      map.resize();
       // Add route line — cyan glow
       map.addSource("route", {
         type: "geojson",
@@ -220,7 +224,7 @@ export function Navigation3DMap({ route, onStepChange }: Navigation3DMapProps) {
   }, [points, route.steps, onStepChange]);
 
   return (
-    <div ref={containerRef} className="absolute inset-0 z-0" style={{ background: "#0A0F1C" }}>
+    <div ref={containerRef} className="absolute inset-0" style={{ background: "#0A0F1C", width: "100%", height: "100%", zIndex: 1 }}>
       {arrived && (
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[100] bg-[#0A0F1C]/90 backdrop-blur-xl rounded-[12px] px-8 py-6 text-center border border-[#22C55E]/30">
           <div className="text-3xl mb-2">&#x1F3C1;</div>
