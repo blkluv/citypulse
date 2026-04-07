@@ -1,9 +1,15 @@
 "use client";
 
 import { useState, useCallback, useMemo } from "react";
+import dynamic from "next/dynamic";
 import { DynamicDriveMap } from "@/components/Drive/DynamicDriveMap";
 import { SearchOverlay } from "@/components/Drive/SearchOverlay";
 import { NavigationCard } from "@/components/Drive/NavigationCard";
+
+const Navigation3DMap = dynamic(
+  () => import("@/components/Drive/Navigation3DMap").then((m) => m.Navigation3DMap),
+  { ssr: false, loading: () => <div className="absolute inset-0 bg-[#0A0F1C] flex items-center justify-center"><div className="w-8 h-8 border-2 border-[#22D3EE]/30 border-t-[#22D3EE] rounded-full animate-spin" /></div> }
+);
 import { useVehicleStream } from "@/hooks/useVehicleStream";
 import { useNanopayment } from "@/hooks/useNanopayment";
 import { MobileTabBar } from "@/components/common/MobileTabBar";
@@ -92,7 +98,15 @@ export default function DrivePage() {
 
   return (
     <div className="h-screen w-screen overflow-hidden bg-[#0A0F1C] relative">
-      <DynamicDriveMap vehicles={vehicles} routeResult={displayRoute} startPoint={startPoint} endPoint={endPoint} onMapClick={handleMapClick} mapClickEnabled={mapClickMode} isNavigating={phase === "navigating"} />
+      {/* Normal mode: Leaflet 2D map */}
+      {phase !== "navigating" && (
+        <DynamicDriveMap vehicles={vehicles} routeResult={displayRoute} startPoint={startPoint} endPoint={endPoint} onMapClick={handleMapClick} mapClickEnabled={mapClickMode} />
+      )}
+
+      {/* Navigation mode: MapLibre 3D map with car animation */}
+      {phase === "navigating" && paidRoute && (
+        <Navigation3DMap route={paidRoute} />
+      )}
 
       {/* ─── TOP BAR (Pencil: 62px status + 48px header) ─── */}
       <div className="absolute top-0 left-0 right-0 z-[1000]">
