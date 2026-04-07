@@ -88,7 +88,7 @@ class ContractEventStream {
           amount: ethers.formatEther(parsed.args[1]),
           timestamp: Number(parsed.args[2]),
           fromZone: parsed.args[3] as string,
-          toZone: parsed.args[3] as string, // zone used for both
+          toZone: "", // parking has no destination zone
           vehiclesQueried: 0,
           txHash: parsed.transactionHash,
           blockNumber: parsed.blockNumber,
@@ -173,7 +173,7 @@ class ContractEventStream {
               amount: ethers.formatEther(parsed.args[1]),
               timestamp: Number(parsed.args[2]),
               fromZone: parsed.args[3] as string,
-              toZone: parsed.args[3] as string,
+              toZone: "",
               vehiclesQueried: 0,
               txHash: parsed.transactionHash,
               blockNumber: parsed.blockNumber,
