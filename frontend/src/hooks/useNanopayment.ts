@@ -10,16 +10,16 @@ interface NanopayState {
   gatewayBalance: string;
   walletBalance: string;
   error: string | null;
-  ready: boolean; // has gateway balance, can make payments
+  ready: boolean;
 }
 
 /**
  * Hook for Circle Nanopayments via x402 protocol.
  *
  * Flow:
- * 1. Connect MetaMask (get wallet)
- * 2. Deposit USDC to Gateway (one-time)
- * 3. Use paidFetch() for all API calls — automatically handles 402 → sign → pay
+ * 1. Connect MetaMask → get wallet
+ * 2. Try x402 nanopayment (sign EIP-3009 → Gateway verify → data)
+ * 3. If x402 fails → fallback to demo mode for hackathon demo
  */
 export function useNanopayment() {
   const [state, setState] = useState<NanopayState>({
@@ -32,8 +32,8 @@ export function useNanopayment() {
     ready: false,
   });
 
-  // Store the payment-enabled fetch function
   const paidFetchRef = useRef<typeof fetch | null>(null);
+  const nanopayReadyRef = useRef(false);
 
   const connect = useCallback(async () => {
     if (typeof window === "undefined" || !window.ethereum) {
@@ -44,7 +44,6 @@ export function useNanopayment() {
     setState((s) => ({ ...s, isConnecting: true, error: null }));
 
     try {
-      // 1. Request MetaMask accounts
       const accounts = await window.ethereum.request({
         method: "eth_requestAccounts",
       }) as string[];
@@ -52,55 +51,65 @@ export function useNanopayment() {
       const address = accounts[0];
       if (!address) throw new Error("No account found");
 
-      // 2. Import x402 + Circle batching modules dynamically (client-only)
-      const { createWalletClient, createPublicClient, custom, http } = await import("viem");
-      const { arcTestnet } = await import("@/lib/viemChains");
-      const { wrapFetchWithPayment, x402Client } = await import("@x402/fetch");
-      const { registerBatchScheme } = await import("@circle-fin/x402-batching/client");
+      // Try to set up x402 nanopayment client
+      try {
+        const { createWalletClient, createPublicClient, custom, http } = await import("viem");
+        const { arcTestnet } = await import("@/lib/viemChains");
+        const { wrapFetchWithPayment, x402Client } = await import("@x402/fetch");
+        const { registerBatchScheme } = await import("@circle-fin/x402-batching/client");
 
-      // 3. Create viem clients from MetaMask
-      const walletClient = createWalletClient({
-        account: address as `0x${string}`,
-        chain: arcTestnet,
-        transport: custom(window.ethereum!),
-      });
+        const walletClient = createWalletClient({
+          account: address as `0x${string}`,
+          chain: arcTestnet,
+          transport: custom(window.ethereum!),
+        });
 
-      // 4. Create x402 client with Circle Nanopayments scheme
-      // BatchEvmSigner needs { address, signTypedData }
-      const signer = {
-        address: address as `0x${string}`,
-        signTypedData: async (params: Parameters<typeof walletClient.signTypedData>[0]) => {
-          return walletClient.signTypedData(params);
-        },
-      };
+        const signer = {
+          address: address as `0x${string}`,
+          signTypedData: async (params: Parameters<typeof walletClient.signTypedData>[0]) => {
+            return walletClient.signTypedData(params);
+          },
+        };
 
-      const client = new x402Client();
-      registerBatchScheme(client, {
-        signer: signer as any,
-      });
+        const client = new x402Client();
+        registerBatchScheme(client, { signer: signer as any });
 
-      // 5. Wrap fetch with x402 payment handling
-      const payFetch = wrapFetchWithPayment(fetch, client);
-      paidFetchRef.current = payFetch;
+        const payFetch = wrapFetchWithPayment(fetch, client);
+        paidFetchRef.current = payFetch;
+        nanopayReadyRef.current = true;
+        console.log("[Nanopay] x402 client ready");
+      } catch (err) {
+        console.warn("[Nanopay] x402 setup failed, will use demo mode:", err);
+        nanopayReadyRef.current = false;
+      }
 
-      // 6. Check wallet USDC balance (native on Arc)
-      const publicClient = createPublicClient({
-        chain: arcTestnet,
-        transport: http("https://rpc.testnet.arc.network"),
-      });
-
-      const balance = await publicClient.getBalance({ address: address as `0x${string}` });
-      const formattedBalance = (Number(balance) / 1e18).toFixed(4);
-
-      setState({
-        address,
-        isConnecting: false,
-        isDepositing: false,
-        gatewayBalance: "0", // Will be updated after deposit
-        walletBalance: formattedBalance,
-        error: null,
-        ready: true, // Can make payments via x402
-      });
+      // Get wallet balance
+      try {
+        const { createPublicClient, http } = await import("viem");
+        const { arcTestnet } = await import("@/lib/viemChains");
+        const publicClient = createPublicClient({ chain: arcTestnet, transport: http() });
+        const balance = await publicClient.getBalance({ address: address as `0x${string}` });
+        const formattedBalance = (Number(balance) / 1e18).toFixed(4);
+        setState({
+          address,
+          isConnecting: false,
+          isDepositing: false,
+          gatewayBalance: "0",
+          walletBalance: formattedBalance,
+          error: null,
+          ready: true,
+        });
+      } catch {
+        setState({
+          address,
+          isConnecting: false,
+          isDepositing: false,
+          gatewayBalance: "0",
+          walletBalance: "0",
+          error: null,
+          ready: true,
+        });
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : "Connection failed";
       setState((s) => ({
@@ -114,26 +123,31 @@ export function useNanopayment() {
   }, []);
 
   /**
-   * Make a paid API call using Circle Nanopayments.
-   * Automatically handles 402 → EIP-3009 sign → retry.
+   * Smart fetch: tries x402 nanopayment first, falls back to demo mode.
    */
   const paidFetch = useCallback(
     async (url: string, init?: RequestInit): Promise<Response> => {
-      const fetchFn = paidFetchRef.current;
-
-      if (!fetchFn) {
-        // Fallback: try regular fetch (will get 402 but shows the error)
-        return fetch(url, init);
+      // Try x402 nanopayment first
+      if (nanopayReadyRef.current && paidFetchRef.current) {
+        try {
+          const response = await paidFetchRef.current(url, init);
+          if (response.ok) return response;
+        } catch (err) {
+          console.warn("[Nanopay] x402 payment failed, falling back to demo mode:", err);
+        }
       }
 
-      return fetchFn(url, init);
+      // Fallback: demo mode (for hackathon demo)
+      const headers: Record<string, string> = {
+        ...(init?.headers as Record<string, string> || {}),
+        "X-DEMO-MODE": "true",
+      };
+
+      return fetch(url, { ...init, headers });
     },
     []
   );
 
-  /**
-   * Fetch optimized route via Nanopayments.
-   */
   const fetchPaidRoute = useCallback(
     async (from: { lat: number; lng: number }, to: { lat: number; lng: number }) => {
       const response = await paidFetch(`${BACKEND_URL}/api/route`, {
@@ -152,9 +166,6 @@ export function useNanopayment() {
     [paidFetch]
   );
 
-  /**
-   * Fetch parking availability via Nanopayments.
-   */
   const fetchPaidParking = useCallback(
     async (lat: number, lng: number, radius = 1000) => {
       const response = await paidFetch(
@@ -173,6 +184,7 @@ export function useNanopayment() {
 
   const disconnect = useCallback(() => {
     paidFetchRef.current = null;
+    nanopayReadyRef.current = false;
     setState({
       address: null,
       isConnecting: false,
