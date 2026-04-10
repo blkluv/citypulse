@@ -4,10 +4,10 @@
 
 ## Live Demo
 
-- **Dashboard**: [citypulse-istanbul.vercel.app](https://citypulse-istanbul.vercel.app)
-- **Drive (Navigation)**: [citypulse-istanbul.vercel.app/drive](https://citypulse-istanbul.vercel.app/drive)
-- **Park (Parking Finder)**: [citypulse-istanbul.vercel.app/park](https://citypulse-istanbul.vercel.app/park)
-- **Istanbul Card (Wallet)**: [citypulse-istanbul.vercel.app/card](https://citypulse-istanbul.vercel.app/card)
+- **Dashboard**: [citypulse-v2.vercel.app](https://citypulse-v2.vercel.app)
+- **Drive (3D Navigation)**: [citypulse-v2.vercel.app/drive](https://citypulse-v2.vercel.app/drive)
+- **Park (Parking Finder)**: [citypulse-v2.vercel.app/park](https://citypulse-v2.vercel.app/park)
+- **Istanbul Card (Wallet)**: [citypulse-v2.vercel.app/card](https://citypulse-v2.vercel.app/card)
 - **Backend API**: [citypulse-backend-production.up.railway.app](https://citypulse-backend-production.up.railway.app)
 
 ## Hackathon Track
