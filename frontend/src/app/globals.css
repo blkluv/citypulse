@@ -1,20 +1,35 @@
 @import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
 :root {
-  --background: #0a0f1e;
-  --foreground: #f0f4f8;
+  --bg-page: #0A0F1C;
+  --bg-card: #1E293B;
+  --bg-inset: #0F172A;
+  --cyan: #22D3EE;
+  --text-primary: #FFFFFF;
+  --text-secondary: #94A3B8;
+  --text-tertiary: #64748B;
+  --text-muted: #475569;
+  --border: #0F172A;
+  --green: #22C55E;
+  --red: #EF4444;
+  --yellow: #EAB308;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-background: var(--bg-page);
+  --color-foreground: var(--text-primary);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-    Helvetica, Arial, sans-serif;
+  background: var(--bg-page);
+  color: var(--text-primary);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.font-mono {
+  font-family: 'JetBrains Mono', monospace !important;
 }
 
 /* -------- Vehicle marker animations -------- */
@@ -38,123 +53,50 @@ body {
   50% { transform: scale(1.1); opacity: 0.8; }
 }
 
-.vehicle-pulse-fast {
-  animation: pulse-fast 1s ease-in-out infinite;
-}
+.vehicle-pulse-fast { animation: pulse-fast 1s ease-in-out infinite; }
+.vehicle-pulse-medium { animation: pulse-medium 1.5s ease-in-out infinite; }
+.vehicle-pulse-slow { animation: pulse-slow 2.5s ease-in-out infinite; }
 
-.vehicle-pulse-medium {
-  animation: pulse-medium 1.5s ease-in-out infinite;
-}
-
-.vehicle-pulse-slow {
-  animation: pulse-slow 2.5s ease-in-out infinite;
-}
-
-/* -------- Payment feed slide-in -------- */
+/* -------- Animations -------- */
 @keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateX(-12px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
+  from { opacity: 0; transform: translateX(-12px); }
+  to { opacity: 1; transform: translateX(0); }
 }
+.payment-slide-in { animation: slideIn 0.3s ease-out forwards; }
 
-.payment-slide-in {
-  animation: slideIn 0.3s ease-out forwards;
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(100%); }
+  to { opacity: 1; transform: translateY(0); }
 }
+.slide-up { animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
 
-/* -------- Payment button glow -------- */
 @keyframes glow {
-  0%, 100% { box-shadow: 0 0 5px #00f0ff40; }
-  50% { box-shadow: 0 0 20px #00f0ff60, 0 0 40px #00f0ff20; }
+  0%, 100% { box-shadow: 0 0 5px #22D3EE40; }
+  50% { box-shadow: 0 0 20px #22D3EE60, 0 0 40px #22D3EE20; }
 }
+.glow { animation: glow 2s ease-in-out infinite; }
 
-.payment-glow {
-  animation: glow 2s ease-in-out infinite;
-}
-
-/* -------- Ticker scroll -------- */
 @keyframes ticker {
   0% { transform: translateX(0); }
   100% { transform: translateX(-50%); }
 }
+.ticker-scroll { animation: ticker 40s linear infinite; }
 
-.ticker-scroll {
-  animation: ticker 40s linear infinite;
-}
+/* -------- Scrollbar -------- */
+.custom-scrollbar::-webkit-scrollbar { width: 4px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: #0F172A; border-radius: 2px; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 2px; }
+.custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #334155; }
 
-/* -------- Custom scrollbar -------- */
-.custom-scrollbar::-webkit-scrollbar {
-  width: 4px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: #111827;
-  border-radius: 2px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #2a3040;
-  border-radius: 2px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #3a4050;
-}
-
-/* Leaflet overrides for dark theme */
-.leaflet-container {
-  background: #0a0f1e !important;
-}
-
+/* -------- Leaflet dark theme -------- */
+.leaflet-container { background: #0A0F1C !important; }
 .leaflet-control-attribution {
-  background: #0a0f1e99 !important;
-  color: #8892a4 !important;
+  background: #0A0F1C99 !important;
+  color: #475569 !important;
   font-size: 9px !important;
 }
-
-.leaflet-control-attribution a {
-  color: #00f0ff !important;
-}
-
-.leaflet-popup-content-wrapper {
-  background: transparent !important;
-  box-shadow: none !important;
-  padding: 0 !important;
-}
-
-.leaflet-popup-tip {
-  display: none !important;
-}
-
-.leaflet-tooltip {
-  background: transparent !important;
-  border: none !important;
-  box-shadow: none !important;
-  padding: 0 !important;
-}
-
-/* Route point marker */
-.route-point-marker {
-  background: transparent !important;
-  border: none !important;
-}
-
-/* -------- Drive page card slide-up -------- */
-@keyframes driveCardSlideUp {
-  from {
-    opacity: 0;
-    transform: translateY(100%);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.drive-card-slide-up {
-  animation: driveCardSlideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
+.leaflet-control-attribution a { color: #22D3EE !important; }
+.leaflet-popup-content-wrapper { background: transparent !important; box-shadow: none !important; padding: 0 !important; }
+.leaflet-popup-tip { display: none !important; }
+.leaflet-tooltip { background: transparent !important; border: none !important; box-shadow: none !important; padding: 0 !important; }
+.route-point-marker { background: transparent !important; border: none !important; }

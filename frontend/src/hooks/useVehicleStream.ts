@@ -65,11 +65,11 @@ export function useVehicleStream() {
         amount: String(data.amount || "0.0001"),
         fromZone: (data.fromZone as string) || (data.zone as string) || "Istanbul",
         toZone: (data.toZone as string) || "Istanbul",
-        vehiclesQueried: (data.vehiclesQueried as number) || Math.floor(Math.random() * 5) + 1,
-        savedMinutes: (data.savedMinutes as number) || Math.floor(Math.random() * 20) + 3,
+        vehiclesQueried: (data.vehiclesQueried as number) || 1,
+        savedMinutes: (data.savedMinutes as number) || 0,
         timestamp: (data.timestamp as number) || Date.now(),
         txHash: (data.txHash as string) || undefined,
-        isReal: false,
+        isReal: !!(data.isReal),
       };
       addPayment(payment);
     });

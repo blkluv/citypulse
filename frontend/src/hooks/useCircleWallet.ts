@@ -1,7 +1,9 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { BACKEND_URL } from "@/lib/constants";
+
+const STORAGE_KEY = "citypulse_circle_wallet";
 
 interface CircleWalletState {
   sessionId: string | null;
@@ -14,15 +16,30 @@ interface CircleWalletState {
 }
 
 export function useCircleWallet() {
-  const [state, setState] = useState<CircleWalletState>({
-    sessionId: null,
-    walletId: null,
-    address: null,
-    balance: "0",
-    isCreating: false,
-    error: null,
-    type: "circle",
+  const [state, setState] = useState<CircleWalletState>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          return { ...parsed, isCreating: false, error: null, type: "circle" as const };
+        }
+      } catch {}
+    }
+    return { sessionId: null, walletId: null, address: null, balance: "0", isCreating: false, error: null, type: "circle" as const };
   });
+
+  // Persist to localStorage when state changes
+  useEffect(() => {
+    if (state.sessionId && state.address) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        sessionId: state.sessionId,
+        walletId: state.walletId,
+        address: state.address,
+        balance: state.balance,
+      }));
+    }
+  }, [state.sessionId, state.walletId, state.address, state.balance]);
 
   const createWallet = useCallback(async () => {
     setState((s) => ({ ...s, isCreating: true, error: null }));
@@ -117,6 +134,7 @@ export function useCircleWallet() {
   );
 
   const disconnect = useCallback(() => {
+    localStorage.removeItem(STORAGE_KEY);
     setState({
       sessionId: null,
       walletId: null,

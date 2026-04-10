@@ -109,9 +109,12 @@ export function useParkingPayment() {
           throw new Error("Connect your wallet first");
         }
 
-        // Determine zone from coordinates
+        // Determine zone from search coordinates using polygon detection
         let zone = "Istanbul";
-        if (state.nearbyLots.length > 0 && state.nearbyLots[0].district) {
+        if (state.searchCenter) {
+          const { detectZone } = await import("@/lib/zones");
+          zone = detectZone(state.searchCenter.lat, state.searchCenter.lng);
+        } else if (state.nearbyLots.length > 0 && state.nearbyLots[0].district) {
           zone = state.nearbyLots[0].district;
         }
 
